@@ -1,24 +1,27 @@
 var express = require("express");
 const { database } = require("../database");
+const roomsService = require("../services/rooms.service");
 const router = express.Router();
 
 // Get available rooms given startDate, endDate, number of persons
 /*
     Lấy tất cả các id phòng và trừ đi các phòng có bản ghi phòng occupied từ startDate tới endDate
- */
+*/
+
 router.get("/available", async (req, res) => {
     let { startDate, endDate, quantity, limit = 20, page = 1 } = req.query;
-    limit = parseInt(limit)
-    page = parseInt(page)
+    limit = parseInt(limit);
+    page = parseInt(page);
     try {
         let QUERY = `SELECT P.* FROM Phong P WHERE NOT EXISTS (
             SELECT * FROM BanGhiPhong BG 
             JOIN DonDatPhong DDP ON BG.MaDatPhong = DDP.MaDon
             WHERE BG.MaPhong = P.MaPhong AND
+            DDP.TrangThaiDon != 'cancelled' AND
             DATE('${startDate}') <= DDP.NgayTraPhong AND
             DATE('${endDate}') >= DDP.NgayNhanPhong)
             LIMIT ${limit}
-            OFFSET ${limit * (page-1)}`;
+            OFFSET ${limit * (page - 1)}`;
         console.log(QUERY);
 
         const [result] = await database.query(QUERY);
@@ -28,6 +31,7 @@ router.get("/available", async (req, res) => {
     }
 });
 
+// Get all rooms
 router.get("/all", async (req, res) => {
     let { limit, page } = req.query;
     try {
@@ -38,10 +42,74 @@ router.get("/all", async (req, res) => {
     }
 });
 
-router.get("/:maphong", async (req, res) => {
-    let maphong = req.params.maphong;
+// create a room
+router.post("/", async (req, res) => {
     try {
-        const [room] = await database.query(`SELECT P.* FROM Phong P WHERE ${maphong} = P.MaPhong`);
+        const result = await roomsService.createRoom(req.body);
+        if (result) {
+            res.status(201).send({ status: "success", message: "Tạo phòng thành công" });
+        } else {
+            res.status(500).send({ status: "success", message: "Tạo phòng thất bại" });
+        }
+    } catch (error) {
+        res.status(error.status).send({ status: "failed", message: error.message });
+    }
+});
+
+router.get("/test", async (req, res) => {
+    let { startDate, endDate } = req.query;
+    const result = await roomsService.getPriceOfRoom("9eae74ec-380e-493c-a489-90084a56756e", startDate, endDate);
+    res.send(result);
+});
+
+// Thêm tiện nghi phòng
+router.post("/:roomId/amenities", async (req, res) => {
+    let roomId = req.params.roomId;
+    let { amenityId } = req.body;
+    if (amenityId) {
+        try {
+            const [result] = await database.query(`CALL ThemTienNghiPhong_Phong('${roomId}', '${amenityId}')`);
+            res.send({ status: "success", message: "Xóa tiện nghi thành công" });
+        } catch (error) {
+            res.status(500).send({ status: "failed", error: error.message });
+        }
+    } else {
+        res.status(400).send({ status: "failed", error: "amenityId is missing" });
+    }
+});
+
+// Update room price
+router.patch("/:roomId/price", async (req, res) => {
+    let roomId = req.params.roomId;
+    try {
+        const result = await roomsService.alterRoomPrice(roomId, req.body);
+        res.status(200).send({ status: "success", data: result });
+    } catch (error) {
+        res.status(500).send({ status: "failed", error: error.message });
+    }
+});
+
+// Xóa tiện nghi phòng (bảng TienNghiPhong_Phong)
+router.delete("/:roomId/amenities", async (req, res) => {
+    let roomId = req.params.roomId;
+    let { amenityId } = req.query;
+    if (amenityId) {
+        try {
+            const [result] = await database.query(`CALL XoaTienNghiPhong_Phong('${maphong}', '${amenityId}')`);
+            res.send({ status: "success", message: "Xóa tiện nghi thành công" });
+        } catch (error) {
+            res.status(500).send({ status: "failed", error: error.message });
+        }
+    } else {
+        res.status(400).send({ status: "failed", error: "amenityId is missing" });
+    }
+});
+
+// Get room information
+router.get("/:roomId", async (req, res) => {
+    let roomId = req.params.roomId;
+    try {
+        const [room] = await database.query(`SELECT P.* FROM Phong P WHERE ${roomId} = P.MaPhong`);
         if (room.length > 0) {
             // check if the room exists
             // lấy tiện nghi phòng
@@ -55,6 +123,29 @@ router.get("/:maphong", async (req, res) => {
         res.status(500).send({ status: "failed", error: error.message });
     }
 });
-// Get all rooms
+
+
+// Update room infomation
+router.patch("/:roomId", async (req, res) => {
+    let roomId = req.params.roomId;
+    try {
+        
+    } catch (error) {
+        
+    }
+})
+
+
+
+// router.delete("/:maphong", async (req, res) => {
+//     let maphong = req.params.maphong;
+//     try {
+//         const [result] = await database.query(`CALL XoaPhong('${maphong}')`);
+//         res.send({ status: "success", message: "Xóa phòng thành công" });
+//     } catch (error) {
+//         res.status(500).send({ status: "failed", error: error.message });
+//     }
+// });
+
 
 module.exports = router;
