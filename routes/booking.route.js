@@ -54,21 +54,12 @@ router.post("/", async (req, res) => {
 
 // for receptionist
 router.patch("/:orderId", async (req, res) => {
-    let { action } = req.body;
     let orderId = req.params.orderId;
-    const order = await roomsService.getOrder(orderId);
-    if (order) {
-        if (order.TrangThai === "cancelled") {
-            res.status(403).send({ status: "failed", message: "Order is cancelled, its status cannot be changed" });
-        } else {
-            let UPDATE_ORDER_QUERY = `UPDATE DonDatPhong SET TrangThaiDon = ${
-                action === "accept" ? "confirmed" : action === "refuse" ? "cancelled" : "not confirmed"
-            } WHERE MaDon = '${orderId}'`;
-            await database.query(UPDATE_ORDER_QUERY);
-            res.send({ status: "success", message: "Update order successfully" });
-        }
-    } else {
-        res.status(404).send({ status: "failed", message: "Order does not exist" });
+    try {
+        const result = await roomsService.updateOrderStatus(orderId, req.body);
+        res.send({ status: "success", message: "Update order successfully" });
+    } catch (error) {
+        res.status(error.status).send({ status: "failed", message: error.message });
     }
 });
 

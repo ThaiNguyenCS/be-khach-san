@@ -2,8 +2,56 @@ const createHttpError = require("http-errors");
 const { generateUUIDV4 } = require("../utils/idManager");
 const { database } = require("../database");
 const { formatDate } = require("date-fns");
-const { ca } = require("date-fns/locale");
+const consumerGoodService = require("./consumer_goods.service");
+const { checkMissingField } = require("../utils/errorHandler");
+
 class RoomService {
+    async addConsumerGoodToRoom(roomId, data) {
+        let { goodId, quantity } = data;
+        checkMissingField("goodId", goodId);
+        checkMissingField("quantity", quantity);
+        const connection = await database.getConnection();
+        await connection.beginTransaction();
+        try {
+            const goodInRoom = await consumerGoodService.findGoodInRoom(roomId, goodId);
+            const goodInWareHouse = await consumerGoodService.getGoodById(goodId);
+            quantity = parseInt(quantity);
+
+            // if this good is not in the room yet
+            if (goodInRoom.length === 0) {
+                const newQuantityInWareHouse = goodInWareHouse[0].SoLuong - quantity;
+                if (newQuantityInWareHouse < 0) {
+                    throw createHttpError(403, "Số lượng hàng trong kho không đủ để cấp");
+                }
+                await consumerGoodService.updateGoodInfo(connection, goodId, {
+                    quantity: goodInWareHouse[0].SoLuong - quantity,
+                });
+                const ADD_TO_ROOM_QUERY = `INSERT INTO DoTieuDung_Phong (MaDoTieuDung, MaPhong, SoLuong)
+                VALUES ('${goodId}', '${roomId}', ${quantity})`;
+                await connection.query(ADD_TO_ROOM_QUERY);
+            } else {
+                const newQuantityInWareHouse = goodInWareHouse[0].SoLuong - (quantity - goodInRoom[0].SoLuong); // tổng - (chênh lệch giá trị mới và cũ trong phòng)
+                if (newQuantityInWareHouse < 0) {
+                    throw createHttpError(403, "Số lượng hàng trong kho không đủ để cấp");
+                }
+                await consumerGoodService.updateGoodInfo(connection, goodId, {
+                    quantity: newQuantityInWareHouse,
+                });
+                const UPDATE_QUERY = `UPDATE DoTieuDung_Phong SET SoLuong = ${quantity} WHERE MaDoTieuDung = '${goodId}' AND MaPhong = '${roomId}'`;
+                await connection.query(UPDATE_QUERY);
+            }
+            await connection.commit();
+
+            return { message: "Cập nhật đồ tiêu dùng trong phòng thành công!" };
+        } catch (error) {
+            console.log(error);
+
+            await connection.rollback();
+            if (!error.status) throw createHttpError(500, error.message);
+            throw error;
+        }
+    }
+
     // use when receptionist accept the order
 
     async getPriceOfRoom(roomId, startDate, endDate) {
@@ -91,6 +139,24 @@ class RoomService {
         return result[0];
     }
 
+    async updateOrderStatus(orderId, data) {
+        let { action } = data;
+        const order = await this.roomsService.getOrder(orderId);
+        if (order) {
+            if (order.TrangThai === "cancelled") {
+                throw createHttpError(403, "Order is cancelled, its status cannot be changed");
+            } else {
+                let UPDATE_ORDER_QUERY = `UPDATE DonDatPhong SET TrangThaiDon = ${
+                    action === "accept" ? "confirmed" : action === "refuse" ? "cancelled" : "not confirmed"
+                } WHERE MaDon = '${orderId}'`;
+                const [result] = await database.query(UPDATE_ORDER_QUERY);
+                return result;
+            }
+        } else {
+            throw createHttpError(404, "Order does not exist");
+        }
+    }
+
     async createRoom(data) {
         let { branchId, type, description, capacity, roomNumber } = data;
 
@@ -159,6 +225,154 @@ class RoomService {
             const [result] = await database.query(UPDATE_QUERY);
             return result;
         } catch (error) {
+            throw createHttpError(500, error.message);
+        }
+    }
+
+    async findReportOfRoomRecord(roomId, recordCreatedTime) {
+        try {
+            const record = await this.findRoomRecord(roomId, recordCreatedTime);
+            console.log(record);
+            if (record.length > 0 && record[0].IDBanBaoCao) {
+                
+                const REPORT_QUERY = `SELECT BCP.ID, DTD.TenSanPham, VPSD.SoLuong, VPSD.ID, VPSD.Gia FROM BanBaoCaoPhong BCP JOIN VatPhamSuDung VPSD ON VPSD.MaBanBaoCaoPhong = BCP.ID JOIN DoTieuDung DTD ON DTD.ID = VPSD.ID WHERE BCP.ID = '${record[0].IDBanBaoCao}'`;
+                // RIGHT JOIN CoSoVatChatHuHao CSVCHH ON BCP.ID = CSVCHH.MaBanBaoCaoPhong 
+                console.log(REPORT_QUERY);
+                
+                const [result] = await database.query(REPORT_QUERY);
+                return result;
+            } else return [];
+        } catch (error) {
+            throw createHttpError(500, error.message);
+        }
+    }
+
+    async findRoomRecord(roomId, recordCreatedTime) {
+        try {
+            const QUERY = `SELECT * FROM BanGhiPhong WHERE MaPhong = '${roomId}' AND ThoiGianTaoBanGhiPhong = '${formatDate(
+                new Date(recordCreatedTime),
+                "yyyy-MM-dd HH:mm:ss"
+            )}'`;
+            console.log(QUERY);
+            
+            const [record] = await database.query(QUERY);
+            return record;
+        } catch (error) {
+            throw createHttpError(500, error.message);
+        }
+    }
+
+    async getAllRoomRecords(roomId) {
+        try {
+            const QUERY = `SELECT * FROM BanGhiPhong WHERE MaPhong = '${roomId}'`;
+            const [record] = await database.query(QUERY);
+            return record;
+        } catch (error) {
+            throw createHttpError(500, error.message);
+        }
+    }
+
+    async updateRoomRecordInfo(connection, roomId, createdTime, data) {
+        let { reportId } = data;
+        const updates = [];
+        if (reportId) {
+            updates.push(`IDBanBaoCao = '${reportId}'`);
+        }
+        try {
+            const QUERY = `UPDATE BanGhiPhong SET ${updates.join(", ")} 
+            WHERE MaPhong = '${roomId}' AND ThoiGianTaoBanGhiPhong = '${formatDate(
+                new Date(createdTime),
+                "yyyy-MM-dd HH:mm:ss"
+            )}'`;
+            if(connection)
+            {
+                await connection.query(QUERY)
+            }
+            else{
+                await database.query(QUERY)
+            }    
+        } catch (error) {
+            throw createHttpError(500, error.message)
+        }
+    }
+
+    async generateReportForRoomRecord(roomId, recordCreatedTime, data) {
+        // roomId vs recordCreatedTime is primary key of room record
+        /*
+            goods: [{
+                goodId,
+                quantity
+            }]
+            brokenFacilities: [{
+                facilityId, 
+                charge
+            }]
+         */
+
+        let { goods = "[]", brokenFacilities = "[]" } = data;
+
+        const connection = await database.getConnection();
+
+        try {
+            goods = JSON.parse(goods);
+            console.log(goods);
+            brokenFacilities = JSON.parse(brokenFacilities);
+            const record = await this.findRoomRecord(roomId, recordCreatedTime);
+            if (record.length > 0) {
+                if (record[0].IDBanBaoCao) {
+                    // report existed, don't create
+                    throw createHttpError(403, "Report for this room existed!");
+                } else {
+                    await connection.beginTransaction();
+                    const newReportId = generateUUIDV4();
+                    const CREATE_REPORT_QUERY = `INSERT INTO BanBaoCaoPhong (ID, ThoiGian) VALUES ('${newReportId}', NOW())`;
+                    console.log(CREATE_REPORT_QUERY);
+                    await connection.query(CREATE_REPORT_QUERY); // create report
+                    await this.updateRoomRecordInfo(connection, roomId, recordCreatedTime, {reportId: newReportId}) // add report ID to room record 
+                    if (goods.length > 0) {
+                        const usages = [];
+                        const updates = [];
+                        // get goods info from the warehouse
+                        const retrievedGoods = await consumerGoodService.getGoodByIds(goods.map((item) => item.goodId));
+                        // add total price for each used good
+                        goods = goods.map((item) => ({
+                            ...item,
+                            price:
+                                retrievedGoods.find((good) => good.ID === item.goodId).GiaBanDonVi *
+                                parseInt(item.quantity),
+                        }));
+                        goods.forEach((item) => {
+                            usages.push(
+                                `('${item.goodId}', ${parseInt(item.quantity)}, ${item.price}, '${newReportId}')`
+                            );
+                            updates.push(
+                                `WHEN MaDoTieuDung = '${item.goodId}' THEN SoLuong - ${parseInt(item.quantity)}`
+                            );
+                        });
+                        const QUERY = `INSERT INTO VatPhamSuDung (ID, SoLuong, Gia, MaBanBaoCaoPhong)
+                        VALUES ${usages.join(", ")}`;
+                        console.log(QUERY);
+                        await connection.query(QUERY);
+                        const UPDATE_GOODS_IN_ROOM = `UPDATE DoTieuDung_Phong SET SoLuong = CASE
+                        ${updates.join(" ")}
+                        ELSE SoLuong
+                        END
+                        WHERE MaPhong = '${roomId}'`;
+                        console.log(UPDATE_GOODS_IN_ROOM);
+                        await connection.query(UPDATE_GOODS_IN_ROOM);
+                    }
+                    if (brokenFacilities.length > 0) {
+                    }
+                    await connection.commit();
+                }
+            } else {
+                throw createHttpError(404, "Room record not found");
+            }
+        } catch (error) {
+            await connection.rollback();
+            if (error.status) {
+                throw error;
+            }
             throw createHttpError(500, error.message);
         }
     }

@@ -8,6 +8,27 @@ const router = express.Router();
     Lấy tất cả các id phòng và trừ đi các phòng có bản ghi phòng occupied từ startDate tới endDate
 */
 
+// Tạo bản báo cáo phòng
+router.post("/:roomId/:createdTime/report", async (req, res) => {
+    try {
+        await roomsService.generateReportForRoomRecord(req.params.roomId, req.params.createdTime, req.body)
+        res.send({status: "success", message: "Tạo báo cáo thành công!"})
+    } catch (error) {
+        res.status(error.status).send({ status: "failed", error: error.message });
+    }
+})
+
+
+// Xem bản báo cáo phòng
+router.get("/:roomId/:createdTime/report", async (req, res) => {
+    try {
+        const result = await roomsService.findReportOfRoomRecord(req.params.roomId, req.params.createdTime)
+        res.send({status: "success", data: result})
+    } catch (error) {
+        res.status(error.status).send({ status: "failed", error: error.message });
+    }
+})
+
 router.get("/available", async (req, res) => {
     let { startDate, endDate, quantity, limit = 20, page = 1 } = req.query;
     limit = parseInt(limit);
@@ -62,6 +83,32 @@ router.get("/test", async (req, res) => {
     res.send(result);
 });
 
+// Thêm đồ dùng vào phòng
+router.post("/:roomId/goods", async (req, res) => {
+    let roomId = req.params.roomId;
+    try {
+        const result = await roomsService.addConsumerGoodToRoom(roomId, req.body);
+        res.send({ status: "success", message: result.message });
+    } catch (error) {
+        console.log(error);
+        
+        res.status(error.status).send({ status: "failed", error: error.message });
+    }
+});
+
+
+router.get("/:roomId/records", async (req, res) => {
+    try {
+        const result = await roomsService.getAllRoomRecords(req.params.roomId)
+        res.send({status: "success", data: result})
+    } catch (error) {
+        res.status(error.status).send({ status: "failed", error: error.message });
+    }
+})
+
+
+
+
 // Thêm tiện nghi phòng
 router.post("/:roomId/amenities", async (req, res) => {
     let roomId = req.params.roomId;
@@ -69,7 +116,7 @@ router.post("/:roomId/amenities", async (req, res) => {
     if (amenityId) {
         try {
             const [result] = await database.query(`CALL ThemTienNghiPhong_Phong('${roomId}', '${amenityId}')`);
-            res.send({ status: "success", message: "Xóa tiện nghi thành công" });
+            res.send({ status: "success", message: "Thêm tiện nghi thành công" });
         } catch (error) {
             res.status(500).send({ status: "failed", error: error.message });
         }
@@ -124,18 +171,12 @@ router.get("/:roomId", async (req, res) => {
     }
 });
 
-
 // Update room infomation
 router.patch("/:roomId", async (req, res) => {
     let roomId = req.params.roomId;
     try {
-        
-    } catch (error) {
-        
-    }
-})
-
-
+    } catch (error) {}
+});
 
 // router.delete("/:maphong", async (req, res) => {
 //     let maphong = req.params.maphong;
@@ -146,6 +187,5 @@ router.patch("/:roomId", async (req, res) => {
 //         res.status(500).send({ status: "failed", error: error.message });
 //     }
 // });
-
 
 module.exports = router;
