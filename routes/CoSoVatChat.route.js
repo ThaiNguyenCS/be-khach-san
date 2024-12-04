@@ -84,4 +84,21 @@ router.delete("/:roomId/facilities/:facilityId", validateRoomMiddleware, async (
     }
 });
 
+// Xem thông tin facilities trong phòng
+router.get("/:roomId/facilities/:facilityId", validateRoomMiddleware, async (req, res) => {
+    const { roomId, facilityId } = req.params;
+    try {
+        const [facility] = await database.query(`
+            SELECT * FROM CoSoVatChatPhong WHERE ID = ? AND MaPhong = ?
+        `, [facilityId, roomId]);
+        if (facility.length === 0) {
+            return res.status(404).send({ status: "failed", error: "Facility not found" });
+        }
+        res.send({ status: "success", data: facility[0] });
+    } catch (error) {
+        res.status(500).send({ status: "failed", error: error.message });
+    }
+});
+
+
 module.exports = router;
