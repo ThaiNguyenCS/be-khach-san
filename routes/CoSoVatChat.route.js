@@ -19,7 +19,7 @@ router.get("/:roomId/facilities", validateRoomMiddleware, async (req, res) => {
 });
 
 // Add a facility to a room
-router.post("/:roomId/facilities", validateRoomMiddleware, async (req, res) => {
+router.post("/:roomId/facilities/create", validateRoomMiddleware, async (req, res) => {
     const roomId = req.params.roomId;
     const { id, tenTrangBi, giaMua, maSanPham, tinhTrang, imageURL  } = req.body;
 
@@ -44,7 +44,7 @@ router.post("/:roomId/facilities", validateRoomMiddleware, async (req, res) => {
 });
 
 // Update a facility in a room
-router.patch("/:roomId/facilities/:facilityId", validateRoomMiddleware, async (req, res) => {
+router.patch("/:roomId/facilities/update/:facilityId", validateRoomMiddleware, async (req, res) => {
     const roomId = req.params.roomId;
     const facilityId = req.params.facilityId;
     const { tenTrangBi, giaMua, maSanPham, tinhTrang, imageURL  } = req.body;
