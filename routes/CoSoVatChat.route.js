@@ -6,7 +6,7 @@ const router = express.Router();
 
 
 // Lấy all facilities in Room
-router.get("/:roomId/facilities", validateRoomMiddleware.validateRoom, async (req, res) => {
+router.get("/:roomId/facilities", validateRoomMiddleware, async (req, res) => {
     const roomId = req.params.roomId;
     try {
         const [facilities] = await database.query(`
@@ -19,7 +19,7 @@ router.get("/:roomId/facilities", validateRoomMiddleware.validateRoom, async (re
 });
 
 // Add a facility to a room
-router.post("/:roomId/facilities", validateRoomMiddleware.validateRoom, async (req, res) => {
+router.post("/:roomId/facilities", validateRoomMiddleware, async (req, res) => {
     const roomId = req.params.roomId;
     const { id, tenTrangBi, giaMua, maSanPham, tinhTrang, imageURL  } = req.body;
 
@@ -44,7 +44,7 @@ router.post("/:roomId/facilities", validateRoomMiddleware.validateRoom, async (r
 });
 
 // Update a facility in a room
-router.patch("/:roomId/facilities/:facilityId", validateRoomMiddleware.validateRoom, async (req, res) => {
+router.patch("/:roomId/facilities/:facilityId", validateRoomMiddleware, async (req, res) => {
     const roomId = req.params.roomId;
     const facilityId = req.params.facilityId;
     const { tenTrangBi, giaMua, maSanPham, tinhTrang, imageURL  } = req.body;
@@ -70,7 +70,7 @@ router.patch("/:roomId/facilities/:facilityId", validateRoomMiddleware.validateR
 });
 
 // Delete a facility from a room
-router.delete("/:roomId/facilities/:facilityId", validateRoomMiddleware.validateRoom, async (req, res) => {
+router.delete("/:roomId/facilities/:facilityId", validateRoomMiddleware, async (req, res) => {
     const roomId = req.params.roomId;
     const facilityId = req.params.facilityId;
 
