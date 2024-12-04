@@ -1,24 +1,12 @@
 const express = require("express");
 const { database } = require("../database");
+const validateRoomMiddleware = require('../middlewares/validateRoom.middleware')
 const router = express.Router();
 
-// Middleware to validate `roomId`
-async function validateRoom(req, res, next) {
-    const roomId = req.params.roomId;
-    try {
-        const [room] = await database.query(`SELECT * FROM Phong WHERE MaPhong = ?`, [roomId]);
-        if (room.length === 0) {
-            return res.status(404).send({ status: "failed", error: "Room not found" });
-        }
-        req.room = room[0]; // Attach room data to the request
-        next();
-    } catch (error) {
-        res.status(500).send({ status: "failed", error: error.message });
-    }
-}
+
 
 // Lấy all facilities in Room
-router.get("/:roomId/facilities", validateRoom, async (req, res) => {
+router.get("/:roomId/facilities", validateRoomMiddleware.validateRoom, async (req, res) => {
     const roomId = req.params.roomId;
     try {
         const [facilities] = await database.query(`
@@ -31,7 +19,7 @@ router.get("/:roomId/facilities", validateRoom, async (req, res) => {
 });
 
 // Add a facility to a room
-router.post("/:roomId/facilities", validateRoom, async (req, res) => {
+router.post("/:roomId/facilities", validateRoomMiddleware.validateRoom, async (req, res) => {
     const roomId = req.params.roomId;
     const { id, tenTrangBi, giaMua, maSanPham, tinhTrang, imageURL  } = req.body;
 
@@ -56,7 +44,7 @@ router.post("/:roomId/facilities", validateRoom, async (req, res) => {
 });
 
 // Update a facility in a room
-router.patch("/:roomId/facilities/:facilityId", validateRoom, async (req, res) => {
+router.patch("/:roomId/facilities/:facilityId", validateRoomMiddleware.validateRoom, async (req, res) => {
     const roomId = req.params.roomId;
     const facilityId = req.params.facilityId;
     const { tenTrangBi, giaMua, maSanPham, tinhTrang, imageURL  } = req.body;
@@ -82,7 +70,7 @@ router.patch("/:roomId/facilities/:facilityId", validateRoom, async (req, res) =
 });
 
 // Delete a facility from a room
-router.delete("/:roomId/facilities/:facilityId", validateRoom, async (req, res) => {
+router.delete("/:roomId/facilities/:facilityId", validateRoomMiddleware.validateRoom, async (req, res) => {
     const roomId = req.params.roomId;
     const facilityId = req.params.facilityId;
 
