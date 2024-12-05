@@ -2,6 +2,9 @@ const createHttpError = require("http-errors");
 const { database } = require("../database");
 
 class FacilityService {
+
+
+
     async addFacility () {
         try
         {
