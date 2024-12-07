@@ -4,6 +4,7 @@ const { database } = require("../database");
 const { formatDate } = require("date-fns");
 const consumerGoodService = require("./consumer_goods.service");
 const { checkMissingField } = require("../utils/errorHandler");
+require("dotenv").config()
 
 class RoomService {
     async addConsumerGoodToRoom(roomId, data) {
