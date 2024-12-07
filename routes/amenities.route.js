@@ -19,10 +19,8 @@ router.post("/rooms", async (req, res) => {
 
 
 router.post("/branch", async (req, res) => {
-    let {ten, moTa} = req.body
+    let {name, description, branchId} = req.body
     try {
-        // CALL (IN ID VARCHAR(50), IN Ten VARCHAR(255), IN MoTa TEXT)
-        const QUERY = `CALL ThemTienNghiPhong ('${generateUUIDV4()}', '${ten}', '${moTa}')`
         
         const [result] = await database.query(QUERY)
         res.status(201).send({status: "success", message: "Thêm tiện nghi thành công"})

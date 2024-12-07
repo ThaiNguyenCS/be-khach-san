@@ -183,6 +183,10 @@ class RoomService {
             VALUES ('${newRoomId}', '${branchId}', '${type}', '${description}', ${capacity}, ${roomNumber})`;
 
             await database.query(INSERT_ROOM_QUERY);
+            if (process.env.NODE_ENV === "deployment") {
+                if (type === "normal") await database.query(`CALL InsertPriceListFor30Days ('${newRoomId}', 500000)`);
+                else await database.query(`CALL InsertPriceListFor30Days ('${newRoomId}', 1000000)`);
+            }
             return true;
         } catch (error) {
             throw createHttpError(500, error.message);
@@ -234,11 +238,10 @@ class RoomService {
             const record = await this.findRoomRecord(roomId, recordCreatedTime);
             console.log(record);
             if (record.length > 0 && record[0].IDBanBaoCao) {
-                
                 const REPORT_QUERY = `SELECT BCP.ID, DTD.TenSanPham, VPSD.SoLuong, VPSD.ID, VPSD.Gia FROM BanBaoCaoPhong BCP JOIN VatPhamSuDung VPSD ON VPSD.MaBanBaoCaoPhong = BCP.ID JOIN DoTieuDung DTD ON DTD.ID = VPSD.ID WHERE BCP.ID = '${record[0].IDBanBaoCao}'`;
-                // RIGHT JOIN CoSoVatChatHuHao CSVCHH ON BCP.ID = CSVCHH.MaBanBaoCaoPhong 
+                // RIGHT JOIN CoSoVatChatHuHao CSVCHH ON BCP.ID = CSVCHH.MaBanBaoCaoPhong
                 console.log(REPORT_QUERY);
-                
+
                 const [result] = await database.query(REPORT_QUERY);
                 return result;
             } else return [];
@@ -254,7 +257,7 @@ class RoomService {
                 "yyyy-MM-dd HH:mm:ss"
             )}'`;
             console.log(QUERY);
-            
+
             const [record] = await database.query(QUERY);
             return record;
         } catch (error) {
@@ -284,15 +287,13 @@ class RoomService {
                 new Date(createdTime),
                 "yyyy-MM-dd HH:mm:ss"
             )}'`;
-            if(connection)
-            {
-                await connection.query(QUERY)
+            if (connection) {
+                await connection.query(QUERY);
+            } else {
+                await database.query(QUERY);
             }
-            else{
-                await database.query(QUERY)
-            }    
         } catch (error) {
-            throw createHttpError(500, error.message)
+            throw createHttpError(500, error.message);
         }
     }
 
@@ -328,7 +329,7 @@ class RoomService {
                     const CREATE_REPORT_QUERY = `INSERT INTO BanBaoCaoPhong (ID, ThoiGian) VALUES ('${newReportId}', NOW())`;
                     console.log(CREATE_REPORT_QUERY);
                     await connection.query(CREATE_REPORT_QUERY); // create report
-                    await this.updateRoomRecordInfo(connection, roomId, recordCreatedTime, {reportId: newReportId}) // add report ID to room record 
+                    await this.updateRoomRecordInfo(connection, roomId, recordCreatedTime, { reportId: newReportId }); // add report ID to room record
                     if (goods.length > 0) {
                         const usages = [];
                         const updates = [];
