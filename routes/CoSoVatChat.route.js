@@ -3,8 +3,6 @@ const { database } = require("../database");
 const validateRoomMiddleware = require('../middlewares/validateRoom.middleware')
 const router = express.Router();
 
-
-
 // Lấy all facilities in Room
 router.get("/:roomId/facilities", validateRoomMiddleware, async (req, res) => {
     const roomId = req.params.roomId;
