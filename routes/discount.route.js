@@ -2,10 +2,10 @@ var express = require("express");
 const discountService = require("../services/discount.service");
 const router = express.Router();
 
-router.get("/alls", async (req, res) => {
+router.get("/all", async (req, res) => {
     try {
-        const result = await discountService.getAllDiscount(req.query);
-        res.send({ status: "success", data: result });
+        const result = await discountService.getAllActiveDiscount(req.query);
+        res.send({ status: "success", data: result.data, limit: result.limit, page: result.page, total: result.total });
     } catch (error) {
         res.status(error.status).send({ status: "failed", message: error.message });
     }

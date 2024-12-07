@@ -10,7 +10,7 @@ class AmenityService {
             const QUERY = `SELECT * TienNghiKhachSan WHERE MaChiNhanh`;
             console.log(QUERY);
             const [result] = await database.query(QUERY);
-            return { result, message: "Thêm tiện nghi cho chi nhánh thành công!" };
+            return result
         } catch (error) {
             if (error.status) throw error;
             throw createHttpError(500, error.message);

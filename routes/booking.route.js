@@ -2,7 +2,30 @@ var express = require("express");
 const { database } = require("../database");
 const { generateUUIDV4 } = require("../utils/idManager");
 const roomsService = require("../services/rooms.service");
+const bookingService = require("../services/booking.service");
 const router = express.Router();
+
+// Lấy tất cả đơn đặt phòng cho khách
+router.get("/all", async (req, res) => {
+    try {
+        const result = await bookingService.getAllOrders(req.query);
+        res.send({ status: "success", data: result });
+    } catch (error) {
+        console.log(error.message);
+        res.status(500).send({ status: "failed", error: error });
+    }
+});
+
+// Lấy đơn đặt phòng cụ thể
+router.get("/:orderId", async (req, res) => {
+    try {
+        const result = await bookingService.getOrderById(req.params.orderId);
+        res.send({ status: "success", data: result });
+    } catch (error) {
+        console.log(error.message);
+        res.status(500).send({ status: "failed", error: error });
+    }
+});
 
 // booking rooms
 router.post("/", async (req, res) => {

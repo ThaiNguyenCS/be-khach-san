@@ -71,6 +71,7 @@ class DiscountService {
         }
     }
 
+
     async getAllActiveDiscount(query) {
         let { limit = 20, page = 1, searchId } = query;
         try {
@@ -81,8 +82,11 @@ class DiscountService {
                 condition = `AND MaGiamGia LIKE '%${searchId}%'`;
             }
             const QUERY = `SELECT * FROM ChuongTrinhGiamGia WHERE NOW() <= ThoiGianKetThuc ${condition} LIMIT ${limit} OFFSET ${(page - 1) * limit}`;
+
+            const COUNT_QUERY = `SELECT COUNT(*) as total FROM ChuongTrinhGiamGia WHERE NOW() <= ThoiGianKetThuc ${condition}`;
             const [result] = await database.query(QUERY);
-            return result;
+            const [countResult] = await database.query(COUNT_QUERY);
+            return {data: result, limit: limit, page: page, total: countResult[0].total};
         } catch (error) {
             if (error.status) throw error;
             throw createHttpError(500, error.message);

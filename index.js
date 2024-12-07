@@ -9,6 +9,7 @@ const empRouter = require("./routes/employees.route");
 const branchRouter = require("./routes/branch.route");
 const faciliTyRouter = require("./routes/CoSoVatChat.route");
 const roomServiceRouter = require("./routes/room_service.route");
+const discountRouter = require("./routes/discount.route");
 var cors = require("cors");
 const CORS_OPTION = {
     origin: ["http://localhost:3000"],
@@ -26,6 +27,7 @@ app.use("/employees", empRouter);
 app.use("/", faciliTyRouter);
 app.use("/branches", branchRouter);
 app.use("/room-service", roomServiceRouter);
+app.use("/discounts", discountRouter);
 
 app.listen(process.env.PORT, () => {
     console.log(`Server's listening at port ${process.env.PORT}`);
