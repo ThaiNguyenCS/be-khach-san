@@ -1,11 +1,11 @@
 const createHttpError = require("http-errors");
 const { generateUUIDV4 } = require("../utils/idManager");
 const { database } = require("../database");
-const { formatDate } = require("date-fns");
+const { formatDate, compareAsc } = require("date-fns");
 const consumerGoodService = require("./consumer_goods.service");
 const { checkMissingField } = require("../utils/errorHandler");
-require("dotenv").config()
-
+const e = require("express");
+require("dotenv").config();
 class RoomService {
     async addConsumerGoodToRoom(roomId, data) {
         let { goodId, quantity } = data;
@@ -55,12 +55,17 @@ class RoomService {
 
     // use when receptionist accept the order
 
+    async getDiscountPriceOfRoom (roomId, startDate, endDate)
+    {
+        
+    }
+
     async getPriceOfRoom(roomId, startDate, endDate) {
+        await this.getRoom(roomId)
         let fStartDate = formatDate(startDate, "yyyy-MM-dd");
         let fEndDate = formatDate(endDate, "yyyy-MM-dd");
         const PRICE_QUERY = `SELECT SUM(GiaCongBo) AS GIATIEN FROM BangGia WHERE MaPhong = '${roomId}' AND 
         ThoiGianBatDauApDung >= DATE('${fStartDate}') AND ThoiGianBatDauApDung <= DATE('${fEndDate}')`;
-
         const [result] = await database.query(PRICE_QUERY);
         return result[0];
     }
@@ -376,6 +381,50 @@ class RoomService {
                 throw error;
             }
             throw createHttpError(500, error.message);
+        }
+    }
+
+    async applyDiscountToRoom(roomId, data) {
+        let { discountId } = data;
+
+        try {
+            const UPDATE_QUERY = `UPDATE Phong SET IDGiamGia = '${discountId}' WHERE MaPhong = '${roomId}'`;
+            const [result] = await database.query(UPDATE_QUERY)
+            return result;
+        } catch (error) {
+            throw createHttpError(500, error.message)
+        }
+    }
+
+    async getAndValidateRoomDiscount (roomId)
+    {
+        const room = await this.getRoom()
+        if(room.IDGiamGia)
+        {
+            const result = await discountService.getDiscountById(room.IDGiamGia)
+            if(result.length > 0)
+            {
+                if(compareAsc(new Date(result[0].ThoiGianKetThuc), new Date(Date.now())) !== -1 ) // discount is still valid
+                {
+                    return {discount: parseInt(result[0].PhanTramGiamGia)}
+                }
+            }
+            const QUERY = `UPDATE Phong SET IDMaGiamGia = NULL WHERE MaPhong = '${roomId}'`
+            await database.query(QUERY)
+        }
+        return {discount: 0}
+    }
+
+    
+
+    async getRoom(roomId) {
+        try {
+            const QUERY = `SELECT * FROM Phong WHERE MaPhong = '${roomId}'`
+            const [result] = await database.query(QUERY)
+            return result
+
+        } catch (error) {
+            throw createHttpError(500, error.message)
         }
     }
 }

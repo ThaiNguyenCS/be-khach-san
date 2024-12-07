@@ -1,6 +1,7 @@
 var express = require("express");
 const { database } = require("../database");
 const roomsService = require("../services/rooms.service");
+const { validateDiscount } = require("../middlewares/validateDiscount.middleware.");
 const router = express.Router();
 
 // Get available rooms given startDate, endDate, number of persons
@@ -9,6 +10,8 @@ const router = express.Router();
 */
 
 // Tạo bản báo cáo phòng
+
+
 router.post("/:roomId/:createdTime/report", async (req, res) => {
     try {
         await roomsService.generateReportForRoomRecord(req.params.roomId, req.params.createdTime, req.body)
@@ -28,6 +31,16 @@ router.get("/:roomId/:createdTime/report", async (req, res) => {
         res.status(error.status).send({ status: "failed", error: error.message });
     }
 })
+
+router.post("/:roomId/discount", validateDiscount, async (req, res) => {
+    try {
+        await roomsService.applyDiscountToRoom(req.params.roomId, req.body)
+        res.send({status: "success", message: "Áp dụng khuyến mãi thành công!"})
+    } catch (error) {
+        res.status(error.status).send({ status: "failed", error: error.message });
+    }
+})
+
 
 router.get("/available", async (req, res) => {
     let { startDate, endDate, quantity, limit = 20, page = 1 } = req.query;
