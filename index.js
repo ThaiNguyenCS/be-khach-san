@@ -4,7 +4,6 @@ const app = express();
 const roomRouter = require("./routes/rooms.route");
 const amenityRouter = require("./routes/amenities.route");
 const bookingRouter = require("./routes/booking.route");
-
 const consumerGoodsRrouter = require("./routes/consumer_goods.route");
 const empRouter = require("./routes/employees.route");
 const branchRouter = require("./routes/branch.route");

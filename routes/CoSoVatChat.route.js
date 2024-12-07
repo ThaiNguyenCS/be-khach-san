@@ -1,10 +1,10 @@
 const express = require("express");
 const { database } = require("../database");
-const validateRoomMiddleware = require('../middlewares/validateRoom.middleware')
 const router = express.Router();
+const {validateRoom} = require("../middlewares/validateRoom.middleware")
 
 // Lấy all facilities in Room
-router.get("/:roomId/facilities", validateRoomMiddleware, async (req, res) => {
+router.get("/:roomId/facilities", validateRoom, async (req, res) => {
     const roomId = req.params.roomId;
     try {
         const [facilities] = await database.query(`
@@ -17,7 +17,7 @@ router.get("/:roomId/facilities", validateRoomMiddleware, async (req, res) => {
 });
 
 // Add a facility to a room
-router.post("/:roomId/facilities/create", validateRoomMiddleware, async (req, res) => {
+router.post("/:roomId/facilities/create", validateRoom, async (req, res) => {
     const roomId = req.params.roomId;
     const { id, tenTrangBi, giaMua, maSanPham, tinhTrang, imageURL  } = req.body;
 
@@ -42,7 +42,7 @@ router.post("/:roomId/facilities/create", validateRoomMiddleware, async (req, re
 });
 
 // Update a facility in a room
-router.patch("/:roomId/facilities/update/:facilityId", validateRoomMiddleware, async (req, res) => {
+router.patch("/:roomId/facilities/update/:facilityId", validateRoom, async (req, res) => {
     const roomId = req.params.roomId;
     const facilityId = req.params.facilityId;
     const { tenTrangBi, giaMua, maSanPham, tinhTrang, imageURL  } = req.body;
@@ -68,7 +68,7 @@ router.patch("/:roomId/facilities/update/:facilityId", validateRoomMiddleware, a
 });
 
 // Delete a facility from a room
-router.delete("/:roomId/facilities/:facilityId", validateRoomMiddleware, async (req, res) => {
+router.delete("/:roomId/facilities/:facilityId", validateRoom, async (req, res) => {
     const roomId = req.params.roomId;
     const facilityId = req.params.facilityId;
 
@@ -83,7 +83,7 @@ router.delete("/:roomId/facilities/:facilityId", validateRoomMiddleware, async (
 });
 
 // Xem thông tin facilities trong phòng
-router.get("/:roomId/facilities/:facilityId", validateRoomMiddleware, async (req, res) => {
+router.get("/:roomId/facilities/:facilityId", validateRoom, async (req, res) => {
     const { roomId, facilityId } = req.params;
     try {
         const [facility] = await database.query(`
