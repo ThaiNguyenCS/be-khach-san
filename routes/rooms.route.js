@@ -71,10 +71,9 @@ router.get("/available", async (req, res) => {
 
 // Get all rooms
 router.get("/all", async (req, res) => {
-    let { limit, page } = req.query;
     try {
-        const [rooms] = await database.query(`SELECT P.* FROM Phong P`);
-        res.send({ status: "success", data: rooms });
+        const result = await roomsService.getAllRooms(req.query);
+        res.send({ status: "success", data: result.data, limit: result.limit, page: result.page, total: result.total });
     } catch (error) {
         res.status(500).send({ status: "failed", error: error.message });
     }

@@ -9,8 +9,35 @@ const getDateArray = require("../utils/date");
 const discountService = require("./discount.service");
 require("dotenv").config();
 class RoomService {
+    async getAllRooms(query) {
+        let { limit = 20, page = 1, branchId, status, type } = query;
+        try {
+            limit = parseInt(limit);
+            page = parseInt(page);
+            const condition = [];
+            if (branchId) {
+                condition.push(`MaChiNhanh = '${branchId}'`);
+            }
 
+            if (status) {
+                condition.push(`TrangThai = '${status}'`);
+            }
+            if (type) {
+                condition.push(`LoaiPhong = '${type}'`);
+            }
+            const QUERY = `SELECT * FROM Phong ${
+                condition.length > 0 ? `WHERE ${condition.join(" AND ")}` : ""
+            } LIMIT ${limit} OFFSET ${(page - 1) * limit}`;
 
+            const COUNT_QUERY = `SELECT COUNT(*) as total FROM Phong ${
+                condition.length > 0 ? `WHERE ${condition.join(" AND ")}` : ""
+            } LIMIT ${limit} OFFSET ${(page - 1) * limit}`;
+
+            const [result] = await database.query(QUERY);
+            const [count] = await database.query(COUNT_QUERY);
+            return { data: result, limit, page, total: count[0].total };
+        } catch (error) {}
+    }
 
     async addConsumerGoodToRoom(roomId, data) {
         let { goodId, quantity } = data;
