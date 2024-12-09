@@ -73,6 +73,7 @@ router.get("/available", async (req, res) => {
 router.get("/all", async (req, res) => {
     try {
         const result = await roomsService.getAllRooms(req.query);
+        console.log(result)
         res.send({ status: "success", data: result.data, limit: result.limit, page: result.page, total: result.total });
     } catch (error) {
         res.status(500).send({ status: "failed", error: error.message });

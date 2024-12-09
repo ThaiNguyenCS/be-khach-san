@@ -5,7 +5,7 @@ const router = express.Router();
 router.get("/all", async (req, res) => {
     try {
         const result = await employeesService.getAllEmployees(req.query);
-        res.send({ status: "success", data: result.data, limit: result.limit, page: result.page });
+        res.send({ status: "success", data: result.data, limit: result.limit, page: result.page, total: result.total });
     } catch (error) {
         res.status(error.status).send({ status: "failed", message: error.message });
     }

@@ -28,13 +28,14 @@ class RoomService {
             const QUERY = `SELECT * FROM Phong ${
                 condition.length > 0 ? `WHERE ${condition.join(" AND ")}` : ""
             } LIMIT ${limit} OFFSET ${(page - 1) * limit}`;
-
+            console.log(QUERY);
             const COUNT_QUERY = `SELECT COUNT(*) as total FROM Phong ${
                 condition.length > 0 ? `WHERE ${condition.join(" AND ")}` : ""
-            } LIMIT ${limit} OFFSET ${(page - 1) * limit}`;
-
+            }`;
+            console.log(COUNT_QUERY);
             const [result] = await database.query(QUERY);
             const [count] = await database.query(COUNT_QUERY);
+            console.log(count)
             return { data: result, limit, page, total: count[0].total };
         } catch (error) {}
     }
@@ -87,16 +88,14 @@ class RoomService {
 
     // use when receptionist accept the order
 
-
     async getTotalPriceOfRoom(roomId, startDate, endDate) {
         await this.getRoom(roomId);
-        const prices = await this.getPriceOfRoomForEachDay(roomId, startDate, endDate)
-        let total = 0
-        for(let i = 0; i < prices.length; i++)
-        {
-            total += prices[i].GiaGiam ? prices[i].GiaGiam : prices[i].GiaCongBo 
+        const prices = await this.getPriceOfRoomForEachDay(roomId, startDate, endDate);
+        let total = 0;
+        for (let i = 0; i < prices.length; i++) {
+            total += prices[i].GiaGiam ? prices[i].GiaGiam : prices[i].GiaCongBo;
         }
-        return {GIATIEN: total};
+        return { GIATIEN: total };
     }
 
     async getPriceOfRoomForEachDay(roomId, startDate, endDate) {
@@ -138,7 +137,7 @@ class RoomService {
                                 ThoiGianBatDauApDung: price.ThoiGianBatDauApDung,
                                 ThoiGianKetThucApDung: price.ThoiGianKetThucApDung,
                                 GiaCongBo: parseFloat(price.GiaCongBo),
-                                GiaGiam: price.GiaCongBo * _discount.PhanTramGiamGia / 100,
+                                GiaGiam: (price.GiaCongBo * _discount.PhanTramGiamGia) / 100,
                             };
                         } else {
                             return {

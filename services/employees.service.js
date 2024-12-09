@@ -144,13 +144,12 @@ class EmployeeService {
 
     async getAllEmployees(query) {
         let { limit = 20, page = 1, role, name } = query;
-
         try {
             limit = parseInt(limit);
             page = parseInt(page);
             const condition = [];
             if (role) {
-                condition.push(`VaiTro = ${role}`);
+                condition.push(`VaiTro = '${role}'`);
             }
 
             if (name) {
@@ -158,11 +157,11 @@ class EmployeeService {
             }
             const QUERY = `SELECT * FROM NhanVien ${
                 condition.length > 0 ? `WHERE ${condition.join(" AND ")}` : ""
-            }  LIMIT ${limit} OFFSET (${(page - 1) * limit})`;
+            }  LIMIT ${limit} OFFSET ${(page - 1) * limit}`;
 
             const COUNT_QUERY = `SELECT COUNT(*) as total FROM NhanVien ${
                 condition.length > 0 ? `WHERE ${condition.join(" AND ")}` : ""
-            }  LIMIT ${limit} OFFSET (${(page - 1) * limit})`;
+            }`;
             const [result] = await database.query(QUERY);
             const [count] = await database.query(COUNT_QUERY);
             return { data: result, limit, page, total: count[0].total };
