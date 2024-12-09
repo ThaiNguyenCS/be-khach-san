@@ -1,13 +1,3 @@
-switch (type) {
-    case 1: {
-        const result = "a";
-        break;
-    }
+const { differenceInBusinessDays } = require("date-fns");
 
-    case 2: {
-        const result = "b";
-        break;
-    }
-}
-console.log(result);
-
+console.log(differenceInBusinessDays(new Date("2024-12-10 22:00:00"), new Date("2024-12-09")));

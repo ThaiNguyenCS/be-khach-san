@@ -1,7 +1,7 @@
 const createHttpError = require("http-errors");
 const { generateUUIDV4 } = require("../utils/idManager");
 const { database } = require("../database");
-const { formatDate, compareAsc } = require("date-fns");
+const { formatDate, compareAsc, differenceInBusinessDays } = require("date-fns");
 const consumerGoodService = require("./consumer_goods.service");
 const { checkMissingField } = require("../utils/errorHandler");
 const e = require("express");
@@ -10,41 +10,34 @@ const discountService = require("./discount.service");
 require("dotenv").config();
 class RoomService {
     async getAllRooms(query) {
-        let { limit = 20, page = 1, status, type, branchId } = query;
+        let { limit = 20, page = 1, branchId, status, type } = query;
         try {
             limit = parseInt(limit);
             page = parseInt(page);
             const condition = [];
-            if (status) {
-                condition.push(`TrangThai = '${status}'`);
-            }
-
-            if (type) {
-                condition.push(`LoaiPhong = '${type}'`);
-            }
-
-            if(branchId)
-            {
+            if (branchId) {
                 condition.push(`MaChiNhanh = '${branchId}'`);
             }
 
+            if (status) {
+                condition.push(`TrangThai = '${status}'`);
+            }
+            if (type) {
+                condition.push(`LoaiPhong = '${type}'`);
+            }
             const QUERY = `SELECT * FROM Phong ${
                 condition.length > 0 ? `WHERE ${condition.join(" AND ")}` : ""
-            } LIMIT ${limit} OFFSET ${(page - 1) * limit} `;
-
-            const COUNT_QUERY = `SELECT COUNT(*) AS total FROM Phong ${
-                condition.length > 0 ? `WHERE ${condition.join(" AND ")}` : ""
-            } LIMIT ${limit} OFFSET ${(page - 1) * limit} `;
+            } LIMIT ${limit} OFFSET ${(page - 1) * limit}`;
             console.log(QUERY);
+            const COUNT_QUERY = `SELECT COUNT(*) as total FROM Phong ${
+                condition.length > 0 ? `WHERE ${condition.join(" AND ")}` : ""
+            }`;
             console.log(COUNT_QUERY);
-
-            const [rooms] = await database.query(QUERY);
-            const [counts] = await database.query(COUNT_QUERY);
-            return { data: rooms, limit: limit, page: page, total: counts[0].total };
-        } catch (error) {
-            if (error.status) throw error;
-            throw createHttpError(500, error.message);
-        }
+            const [result] = await database.query(QUERY);
+            const [count] = await database.query(COUNT_QUERY);
+            console.log(count);
+            return { data: result, limit, page, total: count[0].total };
+        } catch (error) {}
     }
 
     async addConsumerGoodToRoom(roomId, data) {
@@ -97,12 +90,22 @@ class RoomService {
 
     async getTotalPriceOfRoom(roomId, startDate, endDate) {
         await this.getRoom(roomId);
-        const prices = await this.getPriceOfRoomForEachDay(roomId, startDate, endDate);
-        let total = 0;
-        for (let i = 0; i < prices.length; i++) {
-            total += prices[i].GiaGiam ? prices[i].GiaGiam : prices[i].GiaCongBo;
+        try {
+            const prices = await this.getPriceOfRoomForEachDay(roomId, startDate, endDate);
+            let total = 0;
+            const totalDays = differenceInBusinessDays(new Date(endDate), new Date(startDate));
+            if (!prices || prices.length !== totalDays) {
+                throw createHttpError(403, "Bảng giá cho phòng bị thiếu, vui lòng cập nhật thêm");
+            }
+            if (prices.length)
+                for (let i = 0; i < prices.length; i++) {
+                    total += prices[i].GiaGiam ? prices[i].GiaGiam : prices[i].GiaCongBo;
+                }
+            return { GIATIEN: total };
+        } catch (error) {
+            if (!error.status) throw createHttpError(500, error.message);
+            throw error;
         }
-        return { GIATIEN: total };
     }
 
     async getPriceOfRoomForEachDay(roomId, startDate, endDate) {
@@ -172,22 +175,23 @@ class RoomService {
             const ORDER_QUERY = `SELECT * FROM DonDatPhong DDP WHERE DDP.MaDon = '${orderId}'`;
             const [order] = await connection.query(ORDER_QUERY);
 
-            console.log("order", order[0]);
-
             let ROOM_RECORD_ADD_QUERY = `INSERT INTO BanGhiPhong (MaPhong , ThoiGianTaoBanGhiPhong , MaDatPhong , GiaTien) VALUES`;
-            for (let i = 0; i < roomIds.length; i++) {
-                const { GIATIEN } = await this.getTotalPriceOfRoom(
-                    roomIds[i],
-                    order[0].NgayNhanPhong,
-                    order[0].NgayTraPhong
-                );
+            try {
+                for (let i = 0; i < roomIds.length; i++) {
+                    const { GIATIEN } = await this.getTotalPriceOfRoom(
+                        roomIds[i],
+                        order[0].NgayNhanPhong,
+                        order[0].NgayTraPhong
+                    );
 
-                ROOM_RECORD_ADD_QUERY += `('${roomIds[i]}', NOW(), '${orderId}', ${GIATIEN}),`;
+                    ROOM_RECORD_ADD_QUERY += `('${roomIds[i]}', NOW(), '${orderId}', ${GIATIEN}),`;
+                }
+                ROOM_RECORD_ADD_QUERY = ROOM_RECORD_ADD_QUERY.substring(0, ROOM_RECORD_ADD_QUERY.length - 1); // discard the last comma
+                await connection.query(ROOM_RECORD_ADD_QUERY);
+            } catch (error) {
+                if (error.status) throw error;
+                throw createHttpError(500, error.message);
             }
-            ROOM_RECORD_ADD_QUERY = ROOM_RECORD_ADD_QUERY.substring(0, ROOM_RECORD_ADD_QUERY.length - 1); // discard the last comma
-            console.log(ROOM_RECORD_ADD_QUERY);
-
-            await connection.query(ROOM_RECORD_ADD_QUERY);
         } else {
             console.log("no connection");
             throw createHttpError(500, "Something's wrong");

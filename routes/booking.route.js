@@ -101,6 +101,7 @@ router.post("/", async (req, res) => {
         await connection.beginTransaction();
         const FIND_CUS_QUERY = `SELECT * FROM KhachHang WHERE SoDienThoai = '${cusPhoneNumber}'`;
         const [customer] = await connection.query(FIND_CUS_QUERY);
+        
         let cusId = customer[0]?.ID;
         if (customer.length === 0) {
             cusId = generateUUIDV4();
@@ -128,7 +129,7 @@ router.post("/", async (req, res) => {
     } catch (error) {
         console.log(error.message);
         await connection.rollback();
-        res.status(500).send({ status: "failed", error: error });
+        res.status(error.status || 500).send({ status: "failed", error: error });
     }
 });
 
