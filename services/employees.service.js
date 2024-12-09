@@ -140,7 +140,9 @@ class EmployeeService {
         }
     }
 
-    async getEmployeeById(empId) {}
+    async getEmployeeById(empId) {
+        
+    }
 
     async getAllEmployees(query) {
         let { limit = 20, page = 1, role, name } = query;
