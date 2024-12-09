@@ -1,6 +1,8 @@
 var express = require("express");
 const { database } = require("../database");
 const roomsService = require("../services/rooms.service");
+const { validateDiscount } = require("../middlewares/validateDiscount.middleware.");
+const getDateArray = require("../utils/date");
 const router = express.Router();
 
 // Get available rooms given startDate, endDate, number of persons
@@ -9,25 +11,34 @@ const router = express.Router();
 */
 
 // Tạo bản báo cáo phòng
+
 router.post("/:roomId/:createdTime/report", async (req, res) => {
     try {
-        await roomsService.generateReportForRoomRecord(req.params.roomId, req.params.createdTime, req.body)
-        res.send({status: "success", message: "Tạo báo cáo thành công!"})
+        await roomsService.generateReportForRoomRecord(req.params.roomId, req.params.createdTime, req.body);
+        res.send({ status: "success", message: "Tạo báo cáo thành công!" });
     } catch (error) {
         res.status(error.status).send({ status: "failed", error: error.message });
     }
-})
-
+});
 
 // Xem bản báo cáo phòng
 router.get("/:roomId/:createdTime/report", async (req, res) => {
     try {
-        const result = await roomsService.findReportOfRoomRecord(req.params.roomId, req.params.createdTime)
-        res.send({status: "success", data: result})
+        const result = await roomsService.findReportOfRoomRecord(req.params.roomId, req.params.createdTime);
+        res.send({ status: "success", data: result });
     } catch (error) {
         res.status(error.status).send({ status: "failed", error: error.message });
     }
-})
+});
+
+router.post("/:roomId/discount", validateDiscount, async (req, res) => {
+    try {
+        await roomsService.applyDiscountToRoom(req.params.roomId, req.body);
+        res.send({ status: "success", message: "Áp dụng khuyến mãi thành công!" });
+    } catch (error) {
+        res.status(error.status).send({ status: "failed", error: error.message });
+    }
+});
 
 router.get("/available", async (req, res) => {
     let { startDate, endDate, quantity, limit = 20, page = 1 } = req.query;
@@ -46,6 +57,12 @@ router.get("/available", async (req, res) => {
         console.log(QUERY);
 
         const [result] = await database.query(QUERY);
+        if (result.length > 0) {
+            for (let i = 0; i < result.length; i++) {
+                const prices = await roomsService.getPriceOfRoomForEachDay(result[i].MaPhong, startDate, endDate);
+                result[i].GiaPhong = prices;
+            }
+        }
         res.send({ status: "success", data: result });
     } catch (error) {
         res.status(500).send({ status: "failed", error: error.message });
@@ -63,20 +80,6 @@ router.get("/all", async (req, res) => {
     }
 });
 
-// create a room
-router.post("/", async (req, res) => {
-    try {
-        const result = await roomsService.createRoom(req.body);
-        if (result) {
-            res.status(201).send({ status: "success", message: "Tạo phòng thành công" });
-        } else {
-            res.status(500).send({ status: "success", message: "Tạo phòng thất bại" });
-        }
-    } catch (error) {
-        res.status(error.status).send({ status: "failed", message: error.message });
-    }
-});
-
 router.get("/test", async (req, res) => {
     let { startDate, endDate } = req.query;
     const result = await roomsService.getPriceOfRoom("9eae74ec-380e-493c-a489-90084a56756e", startDate, endDate);
@@ -91,23 +94,19 @@ router.post("/:roomId/goods", async (req, res) => {
         res.send({ status: "success", message: result.message });
     } catch (error) {
         console.log(error);
-        
+
         res.status(error.status).send({ status: "failed", error: error.message });
     }
 });
 
-
 router.get("/:roomId/records", async (req, res) => {
     try {
-        const result = await roomsService.getAllRoomRecords(req.params.roomId)
-        res.send({status: "success", data: result})
+        const result = await roomsService.getAllRoomRecords(req.params.roomId);
+        res.send({ status: "success", data: result });
     } catch (error) {
         res.status(error.status).send({ status: "failed", error: error.message });
     }
-})
-
-
-
+});
 
 // Thêm tiện nghi phòng
 router.post("/:roomId/amenities", async (req, res) => {
@@ -175,7 +174,25 @@ router.get("/:roomId", async (req, res) => {
 router.patch("/:roomId", async (req, res) => {
     let roomId = req.params.roomId;
     try {
-    } catch (error) {}
+        const result = await roomsService.updateRoomInfo(roomId, req.body);
+        res.send({ status: "success", message: "Cập nhật thông tin phòng thành công" });
+    } catch (error) {
+        res.status(error.status).send({ status: "failed", message: error.message });
+    }
+});
+
+// create a room
+router.post("/", async (req, res) => {
+    try {
+        const result = await roomsService.createRoom(req.body);
+        if (result) {
+            res.status(201).send({ status: "success", message: "Tạo phòng thành công" });
+        } else {
+            res.status(500).send({ status: "success", message: "Tạo phòng thất bại" });
+        }
+    } catch (error) {
+        res.status(error.status).send({ status: "failed", message: error.message });
+    }
 });
 
 // router.delete("/:maphong", async (req, res) => {

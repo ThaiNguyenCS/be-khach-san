@@ -1,7 +1,7 @@
 const { database } = require("../database");
 
 // Middleware to validate `roomId`
-module.exports.validateRoom = async(req, res, next) => {
+const validateRoom = async(req, res, next) => {
     const roomId = req.params.roomId;
     try {
         const [room] = await database.query(`SELECT * FROM Phong WHERE MaPhong = ?`, [roomId]);
@@ -14,3 +14,5 @@ module.exports.validateRoom = async(req, res, next) => {
         res.status(500).send({ status: "failed", error: error.message });
     }
 }
+
+module.exports = {validateRoom}

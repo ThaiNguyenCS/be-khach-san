@@ -71,16 +71,31 @@ class DiscountService {
         }
     }
 
-    async getAllDiscount(query) {
-        let { limit = 10, page = 1, searchId } = query;
+
+    async getAllActiveDiscount(query) {
+        let { limit = 20, page = 1, searchId } = query;
         try {
             limit = parseInt(limit);
             page = parseInt(page);
             let condition = "";
             if (searchId) {
-                condition = `WHERE MaGiamGia LIKE '%${searchId}%'`;
+                condition = `AND MaGiamGia LIKE '%${searchId}%'`;
             }
-            const QUERY = `SELECT * FROM ChuongTrinhGiamGia ${condition} LIMIT ${limit} OFFSET ${(page - 1) * limit}`;
+            const QUERY = `SELECT * FROM ChuongTrinhGiamGia WHERE NOW() <= ThoiGianKetThuc ${condition} LIMIT ${limit} OFFSET ${(page - 1) * limit}`;
+
+            const COUNT_QUERY = `SELECT COUNT(*) as total FROM ChuongTrinhGiamGia WHERE NOW() <= ThoiGianKetThuc ${condition}`;
+            const [result] = await database.query(QUERY);
+            const [countResult] = await database.query(COUNT_QUERY);
+            return {data: result, limit: limit, page: page, total: countResult[0].total};
+        } catch (error) {
+            if (error.status) throw error;
+            throw createHttpError(500, error.message);
+        }
+    }
+
+    async getDiscountById(id) {
+        try {
+            const QUERY = `SELECT * FROM ChuongTrinhGiamGia WHERE MaGiamGia = '${id}'`;
             const [result] = await database.query(QUERY);
             return result;
         } catch (error) {

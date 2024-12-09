@@ -87,31 +87,37 @@ class EmployeeService {
             pushUpdate(updates, "HoTen", name ? `'${name}'` : null);
             pushUpdate(updates, "GioiTinh", sex ? `'${sex}'` : null);
             pushUpdate(updates, "Luong", salary ? parseFloat(salary) : null);
-            pushUpdate(updates, "NgaySinh", dateOfBirth ? `'${formatDate(new Date(dateOfBirth), "yyyy-MM-dd")}'` : null);
+            pushUpdate(
+                updates,
+                "NgaySinh",
+                dateOfBirth ? `'${formatDate(new Date(dateOfBirth), "yyyy-MM-dd")}'` : null
+            );
             pushUpdate(updates, "MaBHXH", ssn ? `'${ssn}'` : null);
             pushUpdate(updates, "CCCD", citizenId ? `'${citizenId}'` : null);
             pushUpdate(updates, "SoTaiKhoan", bankAccount ? `'${bankAccount}'` : null);
             pushUpdate(updates, "VaiTro", role ? `'${role}'` : null);
-            pushUpdate(updates, "ThoiGianBatDauLamViec", startWorkingDate ? `'${formatDate(new Date(startWorkingDate), "yyyy-MM-dd")}'` : null);
+            pushUpdate(
+                updates,
+                "ThoiGianBatDauLamViec",
+                startWorkingDate ? `'${formatDate(new Date(startWorkingDate), "yyyy-MM-dd")}'` : null
+            );
             pushUpdate(updates, "TrinhDoHocVan", eduLevel ? `'${eduLevel}'` : null);
             pushUpdate(updates, "MaChiNhanh", branchId ? `'${branchId}'` : null);
             if (updates.length > 0) {
                 const QUERY = `UPDATE NhanVien SET ${updates.join(", ")} WHERE ID = '${empId}'`;
-                const [result] = await database.query(QUERY)
-                if(result.affectedRows === 0) // not modified
-                {
-                    throw createHttpError(404, "Không tìm thấy nhân viên");       
+                const [result] = await database.query(QUERY);
+                if (result.affectedRows === 0) {
+                    // not modified
+                    throw createHttpError(404, "Không tìm thấy nhân viên");
                 }
-                return result
+                return result;
+            } // no fields to update
+            else {
+                throw createHttpError(403, "Hãy nhập các trường cần cập nhật");
             }
-            else // no fields to update
-            {
-                throw createHttpError(403, "Hãy nhập các trường cần cập nhật");   
-            }
-        
         } catch (error) {
             console.log(error);
-            
+
             if (error.status) {
                 throw error;
             }
@@ -123,11 +129,9 @@ class EmployeeService {
         try {
             const QUERY = `DELETE FROM NhanVien WHERE ID = '${empId}'`;
             const [result] = await database.query(QUERY);
-            if(result.affectedRows === 0)
-            {
+            if (result.affectedRows === 0) {
                 throw createHttpError(404, "Nhân viên không tồn tại");
             }
-
         } catch (error) {
             if (error.status) {
                 throw error;
@@ -138,7 +142,21 @@ class EmployeeService {
 
     async getEmployeeById(empId) {}
 
-    async getAllEmployees(query) {}
+    async getAllEmployees(query) {
+        let { limit = 20, page = 1 } = query;
+        try {
+            limit = parseFloat(limit);
+            page = parseFloat(page);
+            const QUERY = `SELECT * FROM NhanVien LIMIT ${limit} OFFSET ${(page - 1) * limit}  `;
+            const [result] = await database.query(QUERY);
+            return result
+        } catch (error) {
+            if (error.status) {
+                throw error;
+            }
+            throw createHttpError(500, error.message);
+        }
+    }
 }
 
 module.exports = new EmployeeService();
