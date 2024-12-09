@@ -11,7 +11,6 @@ const router = express.Router();
 */
 
 // Tạo bản báo cáo phòng
-
 router.post("/:roomId/:createdTime/report", async (req, res) => {
     try {
         await roomsService.generateReportForRoomRecord(req.params.roomId, req.params.createdTime, req.body);

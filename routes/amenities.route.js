@@ -104,10 +104,10 @@ router.delete("/rooms/delete/:id", async (req, res) => {
     }
 });
 //! Get All TienNghi có ở khách sạn
-router.get("/", async (req, res) => {
+router.get("/rooms/all", async (req, res) => {
     try {
-        const [amenities] = await database.query(`SELECT * FROM TienNghiPhong`);
-        res.send({ status: "success", data: amenities });
+        const result = await amenitiesService.getAllRoomAmenities(req.query);
+        res.send({ status: "success", ...result });
     } catch (error) {
         res.status(500).send({ status: "failed", error: error.message });
     }
@@ -169,6 +169,26 @@ router.get("/:roomId", async (req, res) => {
     }
 });
 
+//! Lấy danh sách các phòng có một tiện nghi cụ thể.
+router.get("/list-rooms/:amenityId", async (req, res) => {
+    const { amenityId } = req.params;
+
+    try {
+        const [rooms] = await database.query(
+            `
+            SELECT P.* 
+            FROM TienNghiPhong_Phong TNP_P
+            JOIN Phong P ON TNP_P.MaPhong = P.MaPhong
+            WHERE TNP_P.MaTienNghi = ?
+        `,
+            [amenityId]
+        );
+        res.send({ status: "success", data: rooms });
+    } catch (error) {
+        res.status(500).send({ status: "failed", error: error.message });
+    }
+});
+
 //! Check xem tiện nghi abc có ở phòng này không
 router.get("/:roomId/:amenityId", async (req, res) => {
     const { roomId, amenityId } = req.params;
@@ -195,24 +215,6 @@ router.get("/:roomId/:amenityId", async (req, res) => {
         res.status(500).send({ status: "failed", error: error.message });
     }
 });
-//! Lấy danh sách các phòng có một tiện nghi cụ thể.
-router.post("/list-rooms/:amenityId", async (req, res) => {
-    const { amenityId } = req.params;
 
-    try {
-        const [rooms] = await database.query(
-            `
-            SELECT P.* 
-            FROM TienNghiPhong_Phong TNP_P
-            JOIN Phong P ON TNP_P.MaPhong = P.MaPhong
-            WHERE TNP_P.MaTienNghi = ?
-        `,
-            [amenityId]
-        );
-        res.send({ status: "success", data: rooms });
-    } catch (error) {
-        res.status(500).send({ status: "failed", error: error.message });
-    }
-});
 
 module.exports = router;

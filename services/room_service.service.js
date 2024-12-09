@@ -431,9 +431,7 @@ class RoomService {
         } = body;
         try {
             checkMissingField("type", type);
-            checkMissingField("serviceId", serviceId);
-            checkMissingField("roomId", roomId);
-            checkMissingField("createdAt", createdAt);
+            checkMissingField("orderId", orderId);
             type = type.toLowerCase();
             if (weight) weight = parseFloat(weight);
             if (quantity) quantity = parseInt(quantity);
