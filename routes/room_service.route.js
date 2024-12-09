@@ -7,7 +7,7 @@ const router = express.Router();
 // Xem thông tin dịch vụ phòng (menu)
 router.get("/all", async (req, res) => {
     try {
-        const [result] = await discountService.getAllActiveDiscount(req.query);
+        // const [result] = await discountService.getAllActiveDiscount(req.query);
         return { status: "success", data: result };
     } catch (error) {
         res.status(error.message).send({ status: "failed", message: error.message });
