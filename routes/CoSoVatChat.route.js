@@ -71,7 +71,7 @@ router.patch("/facilities/update/:roomId/:facilityId", validateRoom, async (req,
 });
 
 // Delete a facility from a room
-router.delete("/:roomId/facilities/:facilityId", validateRoom, async (req, res) => {
+router.delete("/facilities/:roomId/:facilityId", validateRoom, async (req, res) => {
     const roomId = req.params.roomId;
     const facilityId = req.params.facilityId;
 
@@ -86,7 +86,7 @@ router.delete("/:roomId/facilities/:facilityId", validateRoom, async (req, res) 
 });
 
 // Xem thông tin facilities trong phòng
-router.get("/:roomId/facilities/:facilityId", validateRoom, async (req, res) => {
+router.get("/facilities/:roomId/:facilityId", validateRoom, async (req, res) => {
     const { roomId, facilityId } = req.params;
     try {
         const [facility] = await database.query(`
