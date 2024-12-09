@@ -18,6 +18,7 @@ const CORS_OPTION = {
 app.use(cors(CORS_OPTION));
 
 app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 
 app.use("/goods", consumerGoodsRrouter);
 app.use("/rooms", roomRouter);

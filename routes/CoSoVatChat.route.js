@@ -2,6 +2,7 @@ const express = require("express");
 const { database } = require("../database");
 const router = express.Router();
 const {validateRoom} = require("../middlewares/validateRoom.middleware")
+const { generateUUIDV4 } = require("../utils/idManager");
 
 // Lấy all facilities in Room
 router.get("/:roomId/facilities", validateRoom, async (req, res) => {
@@ -17,15 +18,17 @@ router.get("/:roomId/facilities", validateRoom, async (req, res) => {
 });
 
 // Add a facility to a room
-router.post("/:roomId/facilities/create", validateRoom, async (req, res) => {
+router.post("/facilities/create/:roomId", validateRoom, async (req, res) => {
     const roomId = req.params.roomId;
-    const { id, tenTrangBi, giaMua, maSanPham, tinhTrang, imageURL  } = req.body;
+    const {tenTrangBi, giaMua, maSanPham, tinhTrang, imageURL  } = req.body;
+    // console.log(req.body)
+    // console.log(roomId)
+    const id = generateUUIDV4();
 
     // Validate input
-    if (!id || !tenTrangBi || !giaMua || !tinhTrang || !imageURL ) {
+    if (!tenTrangBi || !giaMua || !tinhTrang || !imageURL ) {
         return res.status(400).send({ status: "failed", error: "Missing required fields" });
     }
-
     if (!['broken', 'maintenance', 'good'].includes(tinhTrang)) {
         return res.status(400).send({ status: "failed", error: "Invalid TinhTrang value" });
     }
