@@ -5,12 +5,47 @@ const { formatDate, compareAsc } = require("date-fns");
 const consumerGoodService = require("./consumer_goods.service");
 const { checkMissingField } = require("../utils/errorHandler");
 const e = require("express");
-const getDateArray = require("../utils/date");
+const { getDateArray } = require("../utils/date");
 const discountService = require("./discount.service");
 require("dotenv").config();
 class RoomService {
+    async getAllRooms(query) {
+        let { limit = 20, page = 1, status, type, branchId } = query;
+        try {
+            limit = parseInt(limit);
+            page = parseInt(page);
+            const condition = [];
+            if (status) {
+                condition.push(`TrangThai = '${status}'`);
+            }
 
+            if (type) {
+                condition.push(`LoaiPhong = '${type}'`);
+            }
 
+            if(branchId)
+            {
+                condition.push(`MaChiNhanh = '${branchId}'`);
+            }
+
+            const QUERY = `SELECT * FROM Phong ${
+                condition.length > 0 ? `WHERE ${condition.join(" AND ")}` : ""
+            } LIMIT ${limit} OFFSET ${(page - 1) * limit} `;
+
+            const COUNT_QUERY = `SELECT COUNT(*) AS total FROM Phong ${
+                condition.length > 0 ? `WHERE ${condition.join(" AND ")}` : ""
+            } LIMIT ${limit} OFFSET ${(page - 1) * limit} `;
+            console.log(QUERY);
+            console.log(COUNT_QUERY);
+
+            const [rooms] = await database.query(QUERY);
+            const [counts] = await database.query(COUNT_QUERY);
+            return { data: rooms, limit: limit, page: page, total: counts[0].total };
+        } catch (error) {
+            if (error.status) throw error;
+            throw createHttpError(500, error.message);
+        }
+    }
 
     async addConsumerGoodToRoom(roomId, data) {
         let { goodId, quantity } = data;
@@ -60,16 +95,14 @@ class RoomService {
 
     // use when receptionist accept the order
 
-
     async getTotalPriceOfRoom(roomId, startDate, endDate) {
         await this.getRoom(roomId);
-        const prices = await this.getPriceOfRoomForEachDay(roomId, startDate, endDate)
-        let total = 0
-        for(let i = 0; i < prices.length; i++)
-        {
-            total += prices[i].GiaGiam ? prices[i].GiaGiam : prices[i].GiaCongBo 
+        const prices = await this.getPriceOfRoomForEachDay(roomId, startDate, endDate);
+        let total = 0;
+        for (let i = 0; i < prices.length; i++) {
+            total += prices[i].GiaGiam ? prices[i].GiaGiam : prices[i].GiaCongBo;
         }
-        return {GIATIEN: total};
+        return { GIATIEN: total };
     }
 
     async getPriceOfRoomForEachDay(roomId, startDate, endDate) {
@@ -111,7 +144,7 @@ class RoomService {
                                 ThoiGianBatDauApDung: price.ThoiGianBatDauApDung,
                                 ThoiGianKetThucApDung: price.ThoiGianKetThucApDung,
                                 GiaCongBo: parseFloat(price.GiaCongBo),
-                                GiaGiam: price.GiaCongBo * _discount.PhanTramGiamGia / 100,
+                                GiaGiam: (price.GiaCongBo * _discount.PhanTramGiamGia) / 100,
                             };
                         } else {
                             return {
@@ -308,12 +341,15 @@ class RoomService {
             const record = await this.findRoomRecord(roomId, recordCreatedTime);
             console.log(record);
             if (record.length > 0 && record[0].IDBanBaoCao) {
-                const REPORT_QUERY = `SELECT BCP.ID, DTD.TenSanPham, VPSD.SoLuong, VPSD.ID, VPSD.Gia FROM BanBaoCaoPhong BCP JOIN VatPhamSuDung VPSD ON VPSD.MaBanBaoCaoPhong = BCP.ID JOIN DoTieuDung DTD ON DTD.ID = VPSD.ID WHERE BCP.ID = '${record[0].IDBanBaoCao}'`;
-                // RIGHT JOIN CoSoVatChatHuHao CSVCHH ON BCP.ID = CSVCHH.MaBanBaoCaoPhong
+                const REPORT_QUERY = `SELECT * FROM BanBaoCaoPhong WHERE ID = '${record[0].IDBanBaoCao}'`;
                 console.log(REPORT_QUERY);
 
-                const [result] = await database.query(REPORT_QUERY);
-                return result;
+                const [report] = await database.query(REPORT_QUERY);
+
+                const GOOD_USAGE_QUERY = `SELECT VPSD.*, DTD.TenSanPham FROM VatPhamSuDung VPSD LEFT JOIN DoTieuDung DTD ON DTD.ID = VPSD.ID WHERE MaBanBaoCaoPhong = '${record[0].IDBanBaoCao}'`;
+                const [good_usages] = await database.query(GOOD_USAGE_QUERY);
+
+                return { report, good_usages };
             } else return [];
         } catch (error) {
             throw createHttpError(500, error.message);

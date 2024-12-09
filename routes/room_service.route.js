@@ -3,13 +3,25 @@ const roomsService = require("../services/rooms.service");
 const room_serviceService = require("../services/room_service.service");
 const router = express.Router();
 
+router.get("/:roomId/:createdAt", async (req, res) => {
+    try {
+        const result = await room_serviceService.getServiceOrderOfRoomRecord({
+            roomId: req.params.roomId,
+            createdAt: req.params.createdAt,
+        });
+        return res.send({ status: "success", data: result });
+    } catch (error) {
+        res.status(error.status).send({ status: "failed", message: error.message });
+    }
+});
+
 // Xem thông tin dịch vụ phòng (menu)
 router.get("/all", async (req, res) => {
     try {
         const result = await room_serviceService.getAllRoomService(req.query);
         return res.send({ status: "success", data: result });
     } catch (error) {
-        res.status(error.message).send({ status: "failed", message: error.message });
+        res.status(error.status).send({ status: "failed", message: error.message });
     }
 });
 

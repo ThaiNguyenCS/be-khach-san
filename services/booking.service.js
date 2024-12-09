@@ -1,6 +1,8 @@
 const createHttpError = require("http-errors");
 const { database } = require("../database");
 const customerService = require("./customer.service");
+const roomsService = require("./rooms.service");
+const room_serviceService = require("./room_service.service");
 
 class BookingService {
     async getAllOrders(query) {
@@ -8,22 +10,26 @@ class BookingService {
         try {
             limit = parseInt(limit);
             page = parseInt(page);
-            const customer = await customerService.findCustomerByPhoneNumber(cusPhoneNumber);
-            if (customer) {
-                const ORDER_QUERY = `SELECT * FROM DonDatPhong WHERE IDKhachHang = '${customer.ID}'`;
-                const [orders] = await database.query(ORDER_QUERY);
-                if (orders.length > 0) {
-                    const promises = [];
-                    for (let i = 0; i < orders.length; i++) {
-                        promises.push(this.getOrderById(orders[i].MaDon));
-                    }
-                    const result = await Promise.all(promises);
-                    return result;
+            let condition = "";
+            let customer = null;
+            if (cusPhoneNumber) {
+                customer = await customerService.findCustomerByPhoneNumber(cusPhoneNumber);
+                condition = ` WHERE IDKhachHang = '${customer.ID}'`;
+                if (!customer) {
+                    throw createHttpError(404, `Không tồn tại khách hàng với số điện thoại ${cusPhoneNumber}`);
                 }
-                return [];
-            } else {
-                throw createHttpError(404, `Không tồn tại khách hàng với số điện thoại ${cusPhoneNumber}`);
             }
+            const ORDER_QUERY = `SELECT * FROM DonDatPhong ${condition}`;
+            const [orders] = await database.query(ORDER_QUERY);
+            if (orders.length > 0) {
+                const promises = [];
+                for (let i = 0; i < orders.length; i++) {
+                    promises.push(this.getOrderById(orders[i].MaDon));
+                }
+                const result = await Promise.all(promises);
+                return result;
+            }
+            return [];
         } catch (error) {
             if (error.status) throw error;
             throw createHttpError(500, error.message);
@@ -37,9 +43,43 @@ class BookingService {
             if (orders.length > 0) {
                 const ROOM_RECORD_QUERY = `SELECT * FROM BanGhiPhong WHERE MaDatPhong = '${orderId}'`;
                 const [records] = await database.query(ROOM_RECORD_QUERY);
+                if(records.length === 0)
+                {
+                    throw createHttpError(404, `Không tìm thấy phòng đã đặt trong đơn đặt phòng ${orderId}`);
+                }
                 return { order: orders[0], rooms: records };
             }
             throw createHttpError(404, `Không tìm thấy đơn đặt phòng ${orderId}`);
+        } catch (error) {
+            if (error.status) throw error;
+            throw createHttpError(500, error.message);
+        }
+    }
+
+    async getOrderByIdForCheckout(orderId) {
+        try {
+            // get info about order and rooms
+            const { order, rooms } = await this.getOrderById(orderId);
+            // get info about room records's report (đảm bảo tất cả các phòng đều đã có bản báo cáo)
+            // get info about room records's service usage
+
+            const reportPromises = [];
+            const servicePromises = [];
+            for (let i = 0; i < rooms.length; i++) {
+                reportPromises.push(
+                    roomsService.findReportOfRoomRecord(rooms[i].MaPhong, rooms[i].ThoiGianTaoBanGhiPhong)
+                );
+                servicePromises.push(
+                    room_serviceService.getServiceOrderOfRoomRecord({
+                        roomId: rooms[i].MaPhong,
+                        createdAt: rooms[i].ThoiGianTaoBanGhiPhong,
+                    })
+                );
+            }
+            const [reports] = await Promise.all(reportPromises);
+            console.log(reports);
+            //TODO: const services = await Promise.all(servicePromises);
+            return { order, reports, rooms };
         } catch (error) {
             if (error.status) throw error;
             throw createHttpError(500, error.message);

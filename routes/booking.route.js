@@ -3,12 +3,69 @@ const { database } = require("../database");
 const { generateUUIDV4 } = require("../utils/idManager");
 const roomsService = require("../services/rooms.service");
 const bookingService = require("../services/booking.service");
+const room_serviceService = require("../services/room_service.service");
 const router = express.Router();
 
 // Lấy tất cả đơn đặt phòng cho khách
 router.get("/all", async (req, res) => {
     try {
         const result = await bookingService.getAllOrders(req.query);
+        res.send({ status: "success", data: result });
+    } catch (error) {
+        console.log(error.message);
+        res.status(500).send({ status: "failed", error: error });
+    }
+});
+
+// Sửa đơn sử dụng dịch vụ
+router.patch("/room-service/:orderId", async (req, res) => {
+    try {
+        const result = await room_serviceService.updateServiceOrderForRoomRecord({
+            ...req.body,
+            orderId: req.params.orderId,
+        });
+        res.send({ status: "success", message: "Cập nhật đơn sử dụng dịch vụ thành công" });
+    } catch (error) {
+        res.status(error.status).send({ status: "failed", error: error });
+    }
+});
+
+// Xóa đơn sử dụng dịch vụ
+router.delete("/room-service/:orderId", async (req, res) => {
+    try {
+        const result = await room_serviceService.deleteServiceOrderForRoomRecord({
+            ...req.query,
+            orderId: req.params.orderId,
+        });
+        res.send({ status: "success", message: "Xóa đơn sử dụng dịch vụ thành công" });
+    } catch (error) {
+        res.status(error.status).send({ status: "failed", error: error });
+    }
+});
+
+// Lấy tất cả các đơn sử dụng dịch vụ của 1 room record
+router.get("/room-service", async (req, res) => {
+    try {
+        const result = await room_serviceService.getServiceOrderOfRoomRecord(req.query);
+    } catch (error) {
+        res.status(error.status).send({ status: "failed", error: error });
+    }
+});
+
+// Đặt đơn sử dụng dịch vụ
+router.post("/room-service", async (req, res) => {
+    try {
+        const result = await room_serviceService.createServiceOrderForRoomRecord(req.body);
+        res.send({ status: "success", message: "Tạo đơn sử dụng dịch vụ thành công" });
+    } catch (error) {
+        res.status(error.status).send({ status: "failed", error: error });
+    }
+});
+
+// Lấy đơn đặt phòng cụ thể
+router.get("/:orderId/checkout", async (req, res) => {
+    try {
+        const result = await bookingService.getOrderByIdForCheckout(req.params.orderId);
         res.send({ status: "success", data: result });
     } catch (error) {
         console.log(error.message);

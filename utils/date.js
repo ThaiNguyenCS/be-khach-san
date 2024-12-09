@@ -1,4 +1,4 @@
-const { addDays, compareAsc } = require("date-fns");
+const { addDays, compareAsc, format } = require("date-fns");
 
 function getDateArray(startDate, endDate) {
     let start = new Date(startDate);
@@ -11,4 +11,11 @@ function getDateArray(startDate, endDate) {
     return arr;
 }
 
-module.exports = getDateArray;
+function formatDateTime(date) {
+    if (date) {
+        const fDate = new Date(date);
+        return format(fDate, "yyyy-MM-dd HH:mm:ss");
+    }
+}
+
+module.exports = {getDateArray, formatDateTime};
