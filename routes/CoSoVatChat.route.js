@@ -44,8 +44,8 @@ router.post("/facilities/create/:roomId", validateRoom, async (req, res) => {
     }
 });
 
-// Update a facility in a room
-router.patch("/:roomId/facilities/update/:facilityId", validateRoom, async (req, res) => {
+// Update a facility status in a room
+router.patch("/facilities/update/:roomId/:facilityId", validateRoom, async (req, res) => {
     const roomId = req.params.roomId;
     const facilityId = req.params.facilityId;
     const { tenTrangBi, giaMua, maSanPham, tinhTrang, imageURL  } = req.body;
