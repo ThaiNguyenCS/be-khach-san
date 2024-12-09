@@ -1,7 +1,7 @@
 const createHttpError = require("http-errors");
 const { generateUUIDV4 } = require("../utils/idManager");
 const { database } = require("../database");
-const { formatDate, compareAsc, differenceInBusinessDays } = require("date-fns");
+const { formatDate, compareAsc, differenceInBusinessDays, differenceInCalendarDays } = require("date-fns");
 const consumerGoodService = require("./consumer_goods.service");
 const { checkMissingField } = require("../utils/errorHandler");
 const e = require("express");
@@ -93,7 +93,10 @@ class RoomService {
         try {
             const prices = await this.getPriceOfRoomForEachDay(roomId, startDate, endDate);
             let total = 0;
-            const totalDays = differenceInBusinessDays(new Date(endDate), new Date(startDate));
+            const totalDays = differenceInCalendarDays(new Date(endDate), new Date(startDate)) + 1;
+            console.log(prices);
+            console.log("totalDays", totalDays);
+
             if (!prices || prices.length !== totalDays) {
                 throw createHttpError(403, "Bảng giá cho phòng bị thiếu, vui lòng cập nhật thêm");
             }
@@ -112,7 +115,7 @@ class RoomService {
         const room = await this.getRoom(roomId);
         try {
             if (room.length > 0) {
-                let dateArr = getDateArray(startDate, endDate);
+                let dateArr = []; // 1 mang cac ngay duoc giam gia tu ngay bat dau toi ngay ket thuc
                 let fStartDate = formatDate(startDate, "yyyy-MM-dd");
                 let fEndDate = formatDate(endDate, "yyyy-MM-dd");
                 const PRICE_QUERY = `SELECT * FROM BangGia WHERE MaPhong = '${roomId}' AND 
@@ -126,6 +129,8 @@ class RoomService {
                     const { discount } = await this.getAndValidateRoomDiscount(room[0].MaPhong);
                     _discount = discount;
                     if (_discount) {
+                        // filter ra nhung ngay duoc giam gia
+                        dateArr = getDateArray(startDate, endDate);
                         dateArr = dateArr.filter(
                             (date) =>
                                 compareAsc(new Date(_discount.ThoiGianBatDau), new Date(date)) !== 1 &&
@@ -174,7 +179,7 @@ class RoomService {
         if (connection) {
             const ORDER_QUERY = `SELECT * FROM DonDatPhong DDP WHERE DDP.MaDon = '${orderId}'`;
             const [order] = await connection.query(ORDER_QUERY);
-
+            console.log(order)
             let ROOM_RECORD_ADD_QUERY = `INSERT INTO BanGhiPhong (MaPhong , ThoiGianTaoBanGhiPhong , MaDatPhong , GiaTien) VALUES`;
             try {
                 for (let i = 0; i < roomIds.length; i++) {
