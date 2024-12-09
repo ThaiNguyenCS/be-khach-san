@@ -63,7 +63,7 @@ class AmenityService {
                 const QUERY = `UPDATE TienNghiKhachSan SET ${updates.join(", ")} WHERE ID = '${id}'`;
                 console.log(QUERY);
                 const [result] = await database.query(QUERY);
-                return { result, message: "Sửa thông tin tiện nghi thành công!" };
+                return result;
             }
             throw createHttpError(400, "Cần có ít nhất 1 trường để cập nhật");
         } catch (error) {

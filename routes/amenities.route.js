@@ -18,13 +18,26 @@ router.post("/rooms", async (req, res) => {
     }
 });
 
+router.patch("/branch/:id", async (req, res) => {
+    try {
+        const result = await amenitiesService.updateAmenityForBranch(req.params.id, req.body);
+
+        res.status(200).send({
+            status: "success",
+            message: "Sửa tiện nghi khách sạn thành công",
+        });
+    } catch (error) {
+        res.status(error.status).send({ status: "failed", error: error.message });
+    }
+});
+
 router.delete("/branch/:id", async (req, res) => {
     try {
         const result = await amenitiesService.deleteAmenityFromBranch(req.params.id);
 
         res.status(200).send({
             status: "success",
-            message: "Xóa tiện nghi chi nhánh thành công"
+            message: "Xóa tiện nghi chi nhánh thành công",
         });
     } catch (error) {
         res.status(error.status).send({ status: "failed", error: error.message });
