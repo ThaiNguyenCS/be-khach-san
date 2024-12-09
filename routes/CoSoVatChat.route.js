@@ -5,7 +5,7 @@ const {validateRoom} = require("../middlewares/validateRoom.middleware")
 const { generateUUIDV4 } = require("../utils/idManager");
 
 // Lấy all facilities in Room
-router.get("/:roomId/facilities", validateRoom, async (req, res) => {
+router.get("/facilities/:roomId", validateRoom, async (req, res) => {
     const roomId = req.params.roomId;
     try {
         const [facilities] = await database.query(`
