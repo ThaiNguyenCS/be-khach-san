@@ -20,7 +20,7 @@ router.post("/rooms", async (req, res) => {
 
 router.patch("/branch/:id", async (req, res) => {
     try {
-        const result = await amenitiesService.updateAmenityForBranch(req.params.id, req.body);
+        const result = await amenitiesService.updateAmenitừyForBranch(req.params.id, req.body);
 
         res.status(200).send({
             status: "success",
