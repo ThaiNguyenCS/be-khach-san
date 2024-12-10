@@ -11,11 +11,13 @@ const faciliTyRouter = require("./routes/CoSoVatChat.route");
 const roomServiceRouter = require("./routes/room_service.route");
 const discountRouter = require("./routes/discount.route");
 var cors = require("cors");
+const morgan = require("morgan");
 const CORS_OPTION = {
     origin: ["http://localhost:3000"],
     credentials: true,
 };
 app.use(cors(CORS_OPTION));
+app.use(morgan("tiny"));
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
