@@ -1,8 +1,8 @@
-const createHttpError = require("http-errors");
-const { database } = require("../database");
-const { pushUpdate } = require("../utils/dynamicUpdate");
-const { checkMissingField } = require("../utils/errorHandler");
-const { generateUUIDV4 } = require("../utils/idManager");
+const createHttpError = require('http-errors');
+const { database } = require('../database');
+const { pushUpdate } = require('../utils/dynamicUpdate');
+const { checkMissingField } = require('../utils/errorHandler');
+const { generateUUIDV4 } = require('../utils/idManager');
 
 class AmenityService {
     async getAllRoomAmenities(query) {
@@ -15,11 +15,11 @@ class AmenityService {
                 condition.push(`Ten LIKE '%${name}%'`);
             }
             const QUERY = `SELECT * FROM TienNghiPhong ${
-                condition.length > 0 ? `WHERE ${condition.join("AND")}` : ""
+                condition.length > 0 ? `WHERE ${condition.join('AND')}` : ''
             } LIMIT ${limit} OFFSET ${(page - 1) * limit}`;
 
             const COUNT_QUERY = `SELECT COUNT(*) as total FROM TienNghiPhong ${
-                condition.length > 0 ? `WHERE ${condition.join("AND")}` : ""
+                condition.length > 0 ? `WHERE ${condition.join('AND')}` : ''
             }`;
             const [result] = await database.query(QUERY);
             const [count] = await database.query(COUNT_QUERY);
@@ -44,11 +44,11 @@ class AmenityService {
                 condition.push(`Ten LIKE '%${name}%'`);
             }
             const QUERY = `SELECT * FROM TienNghiKhachSan ${
-                condition.length > 0 ? `WHERE ${condition.join(" AND ")}` : ""
+                condition.length > 0 ? `WHERE ${condition.join(' AND ')}` : ''
             } LIMIT ${limit} OFFSET ${(page - 1) * limit}`;
 
             const COUNT_QUERY = `SELECT COUNT(*) as total FROM TienNghiKhachSan ${
-                condition.length > 0 ? `WHERE ${condition.join(" AND ")}` : ""
+                condition.length > 0 ? `WHERE ${condition.join(' AND ')}` : ''
             }`;
 
             const [result] = await database.query(QUERY);
@@ -63,11 +63,11 @@ class AmenityService {
     async addAmenityForBranch(data) {
         let { name, description, branchId } = data;
         try {
-            checkMissingField("name", name);
-            checkMissingField("branchId", branchId);
+            checkMissingField('name', name);
+            checkMissingField('branchId', branchId);
             const newAmenityId = generateUUIDV4();
             const QUERY = `INSERT INTO TienNghiKhachSan (ID, Ten, MoTa, MaChiNhanh) 
-            VALUES ('${newAmenityId}', '${name}', ${description ? `'${description}'` : "NULL"}, '${branchId}')`;
+            VALUES ('${newAmenityId}', '${name}', ${description ? `'${description}'` : 'NULL'}, '${branchId}')`;
             console.log(QUERY);
             const [result] = await database.query(QUERY);
             return result;
@@ -81,16 +81,16 @@ class AmenityService {
         let { name, description, branchId } = data;
         try {
             const updates = [];
-            pushUpdate(updates, "Ten", name ? `"${name}"` : null);
-            pushUpdate(updates, "MoTa", description ? `"${description}"` : null);
-            pushUpdate(updates, "MaChiNhanh", branchId ? `"${branchId}"` : null);
+            pushUpdate(updates, 'Ten', name ? `'${name}'` : null);
+            pushUpdate(updates, 'MoTa', description ? `'${description}'` : null);
+            pushUpdate(updates, 'MaChiNhanh', branchId ? `'${branchId}'` : null);
             if (updates.length > 0) {
-                const QUERY = `UPDATE TienNghiKhachSan SET ${updates.join(", ")} WHERE ID = '${id}'`;
+                const QUERY = `UPDATE TienNghiKhachSan SET ${updates.join(', ')} WHERE ID = '${id}'`;
                 console.log(QUERY);
                 const [result] = await database.query(QUERY);
                 return result;
             }
-            throw createHttpError(400, "Cần có ít nhất 1 trường để cập nhật");
+            throw createHttpError(400, 'Cần có ít nhất 1 trường để cập nhật');
         } catch (error) {
             if (error.status) throw error;
             throw createHttpError(500, error.message);
@@ -103,7 +103,7 @@ class AmenityService {
             console.log(QUERY);
             const [result] = await database.query(QUERY);
             if (result.affectedRows === 0) {
-                throw createHttpError(404, "Tiện nghi không tồn tại");
+                throw createHttpError(404, 'Tiện nghi không tồn tại');
             }
             return result;
         } catch (error) {
