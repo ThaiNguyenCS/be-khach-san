@@ -2,9 +2,10 @@ const express = require("express");
 const { database } = require("../database");
 const router = express.Router();
 const {validateRoom} = require("../middlewares/validateRoom.middleware")
+const { generateUUIDV4 } = require("../utils/idManager");
 
 // Lấy all facilities in Room
-router.get("/:roomId/facilities", validateRoom, async (req, res) => {
+router.get("/facilities/:roomId", validateRoom, async (req, res) => {
     const roomId = req.params.roomId;
     try {
         const [facilities] = await database.query(`
@@ -17,15 +18,17 @@ router.get("/:roomId/facilities", validateRoom, async (req, res) => {
 });
 
 // Add a facility to a room
-router.post("/:roomId/facilities/create", validateRoom, async (req, res) => {
+router.post("/facilities/create/:roomId", validateRoom, async (req, res) => {
     const roomId = req.params.roomId;
-    const { id, tenTrangBi, giaMua, maSanPham, tinhTrang, imageURL  } = req.body;
+    const {tenTrangBi, giaMua, maSanPham, tinhTrang, imageURL  } = req.body;
+    // console.log(req.body)
+    // console.log(roomId)
+    const id = generateUUIDV4();
 
     // Validate input
-    if (!id || !tenTrangBi || !giaMua || !tinhTrang || !imageURL ) {
+    if (!tenTrangBi || !giaMua || !tinhTrang || !imageURL ) {
         return res.status(400).send({ status: "failed", error: "Missing required fields" });
     }
-
     if (!['broken', 'maintenance', 'good'].includes(tinhTrang)) {
         return res.status(400).send({ status: "failed", error: "Invalid TinhTrang value" });
     }
@@ -41,8 +44,8 @@ router.post("/:roomId/facilities/create", validateRoom, async (req, res) => {
     }
 });
 
-// Update a facility in a room
-router.patch("/:roomId/facilities/update/:facilityId", validateRoom, async (req, res) => {
+// Update a facility status in a room
+router.patch("/facilities/update/:roomId/:facilityId", validateRoom, async (req, res) => {
     const roomId = req.params.roomId;
     const facilityId = req.params.facilityId;
     const { tenTrangBi, giaMua, maSanPham, tinhTrang, imageURL  } = req.body;
@@ -68,7 +71,7 @@ router.patch("/:roomId/facilities/update/:facilityId", validateRoom, async (req,
 });
 
 // Delete a facility from a room
-router.delete("/:roomId/facilities/:facilityId", validateRoom, async (req, res) => {
+router.delete("/facilities/:roomId/:facilityId", validateRoom, async (req, res) => {
     const roomId = req.params.roomId;
     const facilityId = req.params.facilityId;
 
@@ -83,7 +86,7 @@ router.delete("/:roomId/facilities/:facilityId", validateRoom, async (req, res) 
 });
 
 // Xem thông tin facilities trong phòng
-router.get("/:roomId/facilities/:facilityId", validateRoom, async (req, res) => {
+router.get("/facilities/:roomId/:facilityId", validateRoom, async (req, res) => {
     const { roomId, facilityId } = req.params;
     try {
         const [facility] = await database.query(`
