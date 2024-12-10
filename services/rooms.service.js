@@ -9,6 +9,50 @@ const { getDateArray } = require("../utils/date");
 const discountService = require("./discount.service");
 require("dotenv").config();
 class RoomService {
+    async generatePriceForAllRoomsInAMonth(data) {
+        let { month, year, normalRoomMinPrice, normalRoomPublicPrice, vipRoomMinPrice, vipRoomPublicPrice } = data;
+        try {
+            checkMissingField("month", month);
+            checkMissingField("year", year);
+            checkMissingField("normalRoomMinPrice", normalRoomMinPrice);
+            checkMissingField("normalRoomPublicPrice", normalRoomPublicPrice);
+            checkMissingField("vipRoomMinPrice", vipRoomMinPrice);
+            checkMissingField("vipRoomPublicPrice", vipRoomPublicPrice);
+            month = parseInt(month);
+            year = parseInt(year);
+            normalRoomMinPrice = parseFloat(normalRoomMinPrice);
+            normalRoomPublicPrice = parseFloat(normalRoomPublicPrice);
+            vipRoomMinPrice = parseFloat(vipRoomMinPrice);
+            vipRoomPublicPrice = parseFloat(vipRoomPublicPrice);
+            const QUERY = `CALL InsertDailyPricesByRoomType (${month}, ${year}, ${normalRoomMinPrice}, ${normalRoomPublicPrice}, ${vipRoomMinPrice}, ${vipRoomPublicPrice})`;
+            console.log(QUERY);
+            const [result] = await database.query(QUERY);
+            console.log(result);
+            return result;
+        } catch (error) {
+            if (error.status) throw error;
+            throw createHttpError(500, error.message);
+        }
+    }
+
+    async deletePriceOfAllRoomsInAMonth(query) {
+        let { month, year } = query;
+        try {
+            checkMissingField("month", month);
+            checkMissingField("year", year);
+            month = parseInt(month);
+            year = parseInt(year);
+            const QUERY = `CALL DeletePricesByMonth (${month}, ${year})`;
+            console.log(QUERY);
+            const [result] = await database.query(QUERY);
+            console.log(result);
+            return result;
+        } catch (error) {
+            if (error.status) throw error;
+            throw createHttpError(500, error.message);
+        }
+    }
+
     async getAllRooms(query) {
         let { limit = 20, page = 1, branchId, status, type } = query;
         try {
@@ -87,6 +131,35 @@ class RoomService {
     }
 
     // use when receptionist accept the order
+    async getPriceOfRoomInMonths(query) {
+        let { roomId, months } = query;
+        try {
+            checkMissingField("roomId", roomId);
+            checkMissingField("months", months);
+            months = JSON.parse(months);
+
+            let monthYearPairs = months.map((date) => [new Date(date).getMonth() + 1, new Date(date).getFullYear()]);
+            // lấy các cặp tháng, năm unique
+            monthYearPairs = Array.from(new Set(monthYearPairs.map((date) => JSON.stringify(date)))).map((dateStr) =>
+                JSON.parse(dateStr)
+            );
+            console.log(monthYearPairs);
+            if (monthYearPairs.length === 0) {
+                throw createHttpError(400, "Vui lòng chọn (các) tháng để xem bảng giá");
+            }
+            const results = [];
+            for (let i = 0; i < monthYearPairs.length; i++) {
+                const QUERY = `CALL GetPriceOfRoomInMonth('${roomId}', ${monthYearPairs[i][0]},  ${monthYearPairs[i][1]})`;
+                console.log(QUERY);
+                const [result] = await database.query(QUERY);
+                results.push({ month: monthYearPairs[i][0], year: monthYearPairs[i][1], data: result[0] });
+            }
+            return results
+        } catch (error) {
+            if (!error.status) throw createHttpError(500, error.message);
+            throw error;
+        }
+    }
 
     async getTotalPriceOfRoom(roomId, startDate, endDate) {
         await this.getRoom(roomId);
@@ -179,7 +252,7 @@ class RoomService {
         if (connection) {
             const ORDER_QUERY = `SELECT * FROM DonDatPhong DDP WHERE DDP.MaDon = '${orderId}'`;
             const [order] = await connection.query(ORDER_QUERY);
-            console.log(order)
+            console.log(order);
             let ROOM_RECORD_ADD_QUERY = `INSERT INTO BanGhiPhong (MaPhong , ThoiGianTaoBanGhiPhong , MaDatPhong , GiaTien) VALUES`;
             try {
                 for (let i = 0; i < roomIds.length; i++) {

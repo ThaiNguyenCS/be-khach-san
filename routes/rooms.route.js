@@ -3,6 +3,7 @@ const { database } = require("../database");
 const roomsService = require("../services/rooms.service");
 const { validateDiscount } = require("../middlewares/validateDiscount.middleware.");
 const { getDateArray } = require("../utils/date");
+const { validateRoom } = require("../middlewares/validateRoom.middleware");
 const router = express.Router();
 
 // Get available rooms given startDate, endDate, number of persons
@@ -34,6 +35,27 @@ router.post("/:roomId/discount", validateDiscount, async (req, res) => {
     try {
         await roomsService.applyDiscountToRoom(req.params.roomId, req.body);
         res.send({ status: "success", message: "Áp dụng khuyến mãi thành công!" });
+    } catch (error) {
+        res.status(error.status).send({ status: "failed", error: error.message });
+    }
+});
+
+router.post("/price/all", async (req, res) => {
+    try {
+        const result = await roomsService.generatePriceForAllRoomsInAMonth(req.body);
+        res.send({ status: "success", message: "Tạo bảng giá cho tất cả các phòng thành công" });
+    } catch (error) {
+        res.status(error.status).send({ status: "failed", error: error.message });
+    }
+});
+
+router.delete("/price/all", async (req, res) => {
+    try {
+        const result = await roomsService.deletePriceOfAllRoomsInAMonth(req.query);
+        res.send({
+            status: "success",
+            message: `Xóa bảng giá cho tất cả các phòng trong tháng ${req.query.month}/${req.query.year} thành công`,
+        });
     } catch (error) {
         res.status(error.status).send({ status: "failed", error: error.message });
     }
@@ -72,7 +94,7 @@ router.get("/available", async (req, res) => {
 router.get("/all", async (req, res) => {
     try {
         const result = await roomsService.getAllRooms(req.query);
-        console.log(result)
+        console.log(result);
         res.send({ status: "success", data: result.data, limit: result.limit, page: result.page, total: result.total });
     } catch (error) {
         res.status(500).send({ status: "failed", error: error.message });
@@ -124,7 +146,18 @@ router.post("/:roomId/amenities", async (req, res) => {
 });
 
 // Update room price
-router.patch("/:roomId/price", async (req, res) => {
+router.get("/:roomId/price", validateRoom, async (req, res) => {
+    let roomId = req.params.roomId;
+    try {
+        const result = await roomsService.getPriceOfRoomInMonths({ roomId, ...req.query });
+        res.status(200).send({ status: "success", data: result });
+    } catch (error) {
+        res.status(500).send({ status: "failed", error: error.message });
+    }
+});
+
+// Update room price
+router.patch("/:roomId/price", validateRoom, async (req, res) => {
     let roomId = req.params.roomId;
     try {
         const result = await roomsService.alterRoomPrice(roomId, req.body);
