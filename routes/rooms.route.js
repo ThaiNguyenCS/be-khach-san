@@ -4,12 +4,15 @@ const roomsService = require("../services/rooms.service");
 const { validateDiscount } = require("../middlewares/validateDiscount.middleware.");
 const { getDateArray } = require("../utils/date");
 const { validateRoom } = require("../middlewares/validateRoom.middleware");
+const consumer_goodsService = require("../services/consumer_goods.service");
 const router = express.Router();
 
 // Get available rooms given startDate, endDate, number of persons
 /*
     Lấy tất cả các id phòng và trừ đi các phòng có bản ghi phòng occupied từ startDate tới endDate
 */
+
+
 
 // Tạo bản báo cáo phòng
 router.post("/:roomId/:createdTime/report", async (req, res) => {
@@ -35,6 +38,15 @@ router.post("/:roomId/discount", validateDiscount, async (req, res) => {
     try {
         await roomsService.applyDiscountToRoom(req.params.roomId, req.body);
         res.send({ status: "success", message: "Áp dụng khuyến mãi thành công!" });
+    } catch (error) {
+        res.status(error.status).send({ status: "failed", error: error.message });
+    }
+});
+
+router.get("/:roomId/goods", async (req, res) => {
+    try {
+        const result = await consumer_goodsService.findGoodsInRoom(req.params.roomId);
+        res.send({ status: "success", data: result });
     } catch (error) {
         res.status(error.status).send({ status: "failed", error: error.message });
     }

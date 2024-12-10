@@ -84,13 +84,15 @@ class RoomService {
         } catch (error) {}
     }
 
+
     async addConsumerGoodToRoom(roomId, data) {
         let { goodId, quantity } = data;
-        checkMissingField("goodId", goodId);
-        checkMissingField("quantity", quantity);
+ 
         const connection = await database.getConnection();
         await connection.beginTransaction();
         try {
+            checkMissingField("goodId", goodId);
+            checkMissingField("quantity", quantity);
             const goodInRoom = await consumerGoodService.findGoodInRoom(roomId, goodId);
             const goodInWareHouse = await consumerGoodService.getGoodById(goodId);
             quantity = parseInt(quantity);
