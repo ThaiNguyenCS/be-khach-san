@@ -43,8 +43,7 @@ class BookingService {
             if (orders.length > 0) {
                 const ROOM_RECORD_QUERY = `SELECT * FROM BanGhiPhong WHERE MaDatPhong = '${orderId}'`;
                 const [records] = await database.query(ROOM_RECORD_QUERY);
-                if(records.length === 0)
-                {
+                if (records.length === 0) {
                     throw createHttpError(404, `Không tìm thấy phòng đã đặt trong đơn đặt phòng ${orderId}`);
                 }
                 return { order: orders[0], rooms: records };
@@ -78,8 +77,9 @@ class BookingService {
             }
             const [reports] = await Promise.all(reportPromises);
             console.log(reports);
-            //TODO: const services = await Promise.all(servicePromises);
-            return { order, reports, rooms };
+            const services = await Promise.all(servicePromises);
+            console.log(services);
+            return { order, reports, rooms, services };
         } catch (error) {
             if (error.status) throw error;
             throw createHttpError(500, error.message);

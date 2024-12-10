@@ -55,6 +55,7 @@ router.get("/room-service", async (req, res) => {
 // Đặt đơn sử dụng dịch vụ
 router.post("/room-service", async (req, res) => {
     try {
+        console.log("here")
         const result = await room_serviceService.createServiceOrderForRoomRecord(req.body);
         res.send({ status: "success", message: "Tạo đơn sử dụng dịch vụ thành công" });
     } catch (error) {

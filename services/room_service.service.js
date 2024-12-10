@@ -249,7 +249,7 @@ class RoomService {
             }
             const [result] = await database.query(QUERY);
             if (result.length > 0) {
-                return result[0];
+                return result[0][0];
             } else {
                 throw createHttpError(404, "Không tìm thấy dịch vụ");
             }
@@ -317,6 +317,7 @@ class RoomService {
             startTime,
             finishTime,
         } = body;
+        console.log(body)
         try {
             checkMissingField("type", type);
             checkMissingField("serviceId", serviceId);
@@ -328,7 +329,7 @@ class RoomService {
             if (distance) distance = parseInt(distance);
             const service = await this.getRoomServiceInfo({ type, serviceId });
             const newOrderId = generateUUIDV4();
-
+            console.log(service);
             switch (type) {
                 case "laundry": {
                     let totalBill = parseFloat(service.MucGia) * weight;
@@ -365,7 +366,10 @@ class RoomService {
                     return true;
                 }
                 case "food": {
+                    
+                    
                     let totalBill = parseFloat(service.MucGia) * quantity;
+                    
                     await database.query(`CALL CreateDonDatDichVuAnUong(
                         '${newOrderId}', 
                         '${serviceId}', 
@@ -429,6 +433,8 @@ class RoomService {
             finishTime,
             distance,
         } = body;
+        console.log(body);
+        
         try {
             checkMissingField("type", type);
             checkMissingField("orderId", orderId);
