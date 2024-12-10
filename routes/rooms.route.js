@@ -86,17 +86,23 @@ router.delete("/price/all", async (req, res) => {
 });
 
 router.get("/available", async (req, res) => {
-    let { startDate, endDate, quantity, limit = 20, page = 1 } = req.query;
+    let { startDate, endDate, branchId, limit = 20, page = 1 } = req.query;
     limit = parseInt(limit);
     page = parseInt(page);
     try {
+        const condition = [];
+        condition.push(`P.TrangThai != 'maintenance'`);
+        if (branchId) {
+            condition.push(`P.MaChiNhanh = '${branchId}'`);
+        }
         let QUERY = `SELECT P.* FROM Phong P WHERE NOT EXISTS (
             SELECT * FROM BanGhiPhong BG 
             JOIN DonDatPhong DDP ON BG.MaDatPhong = DDP.MaDon
             WHERE BG.MaPhong = P.MaPhong AND
-            DDP.TrangThaiDon != 'cancelled' AND
+            DDP.TrangThaiDon != 'cancelled' AND 
             DATE('${startDate}') <= DDP.NgayTraPhong AND
             DATE('${endDate}') >= DDP.NgayNhanPhong)
+             ${condition.length > 0 ? `AND ${condition.join(" AND ")}` : ""}
             LIMIT ${limit}
             OFFSET ${limit * (page - 1)}`;
         console.log(QUERY);
