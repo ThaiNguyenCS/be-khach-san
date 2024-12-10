@@ -12,7 +12,19 @@ const router = express.Router();
     Lấy tất cả các id phòng và trừ đi các phòng có bản ghi phòng occupied từ startDate tới endDate
 */
 
-
+// Xóa đồ tiêu dùng khỏi phòng
+router.delete("/:roomId/goods/:goodId", async (req, res) => {
+    try {
+        const result = await consumer_goodsService.deleteGoodOutOfRoom({
+            roomId: req.params.roomId,
+            goodId: req.params.goodId,
+        });
+        res.send({ status: "success", message: "Xóa đồ tiêu dùng khỏi phòng thành công" });
+    } catch (error) {
+        console.log(error);
+        res.status(error.status).send({ status: "failed", error: error.message });
+    }
+});
 
 // Tạo bản báo cáo phòng
 router.post("/:roomId/:createdTime/report", async (req, res) => {

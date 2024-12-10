@@ -4,6 +4,33 @@ const { checkMissingField } = require("../utils/errorHandler");
 const { generateUUIDV4 } = require("../utils/idManager");
 
 class ConsumerGoodService {
+
+    async deleteGoodOutOfRoom(query) {
+        let { roomId, goodId } = query;
+        const connection = await database.getConnection();
+        connection.beginTransaction();
+        try {
+            checkMissingField("roomId", roomId);
+            checkMissingField("goodId", goodId);
+            const goodInRoom = await this.findGoodInRoom(roomId, goodId);
+            if (goodInRoom.length > 0) {
+                const RETURN_QUERY = `UPDATE DoTieuDung SET SoLuong = SoLuong + ${goodInRoom[0].SoLuong} WHERE ID = '${goodId}'`;
+                console.log(RETURN_QUERY);
+                await connection.query(RETURN_QUERY);
+                const QUERY = `DELETE FROM DoTieuDung_Phong WHERE MaPhong = '${roomId}' AND MaDoTieuDung = '${goodId}'`;
+                await connection.query(QUERY);
+                await connection.commit();
+                return true;
+            } else {
+                throw createHttpError(404, "Không tìm thấy đồ tiêu dùng trong phòng");
+            }
+        } catch (error) {
+            await connection.rollback();
+            if (!error.status) throw createHttpError(500, error.message);
+            throw error;
+        }
+    }
+
     async findGoodsInRoom(roomId) {
         try {
             const QUERY = `SELECT * FROM DoTieuDung_Phong WHERE MaPhong = '${roomId}'`;
