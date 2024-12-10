@@ -248,7 +248,8 @@ class RoomService {
                 }
             }
             const [result] = await database.query(QUERY);
-            if (result.length > 0) {
+            // cái này do procedure trả về result[1] là metadata
+            if (result.length > 0 && result[0].length > 0) {
                 return result[0][0];
             } else {
                 throw createHttpError(404, "Không tìm thấy dịch vụ");
@@ -287,7 +288,7 @@ class RoomService {
                     throw createHttpError(400, "Loại dịch vụ không hợp lệ");
                 }
             }
-            if (result.length > 0) return result[0];
+            if (result.length > 0 && result[0].length > 0) return result[0][0];
             throw createHttpError(404, "Không tìm thấy đơn đặt dịch vụ");
         } catch (error) {
             if (error.status) throw error;
@@ -317,7 +318,7 @@ class RoomService {
             startTime,
             finishTime,
         } = body;
-        console.log(body)
+        console.log(body);
         try {
             checkMissingField("type", type);
             checkMissingField("serviceId", serviceId);
@@ -358,7 +359,6 @@ class RoomService {
                         NOW(),
                         '${departure}',
                         '${destination}',
-                        '${quantity}',
                         ${totalBill},
                         '${status}'
                         )`
@@ -366,10 +366,8 @@ class RoomService {
                     return true;
                 }
                 case "food": {
-                    
-                    
                     let totalBill = parseFloat(service.MucGia) * quantity;
-                    
+
                     await database.query(`CALL CreateDonDatDichVuAnUong(
                         '${newOrderId}', 
                         '${serviceId}', 
@@ -434,7 +432,7 @@ class RoomService {
             distance,
         } = body;
         console.log(body);
-        
+
         try {
             checkMissingField("type", type);
             checkMissingField("orderId", orderId);
@@ -453,6 +451,12 @@ class RoomService {
             switch (type) {
                 case "laundry": {
                     let totalBill = weight ? parseFloat(service.MucGia) * weight : null;
+                    console.log(`CALL UpdateDonSuDungDichVuGiatUi (
+                        '${orderId}', 
+                        ${handleParameterIfNull(weight)},
+                        ${handleParameterIfNull(totalBill)},
+                        ${handleParameterIfNull(status)}
+                        )`);
                     await database.query(
                         `CALL UpdateDonSuDungDichVuGiatUi (
                         '${orderId}', 
