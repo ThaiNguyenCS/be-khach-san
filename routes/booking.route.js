@@ -47,6 +47,7 @@ router.delete("/room-service/:orderId", async (req, res) => {
 router.get("/room-service", async (req, res) => {
     try {
         const result = await room_serviceService.getServiceOrderOfRoomRecord(req.query);
+        res.send({status: "success", data: result})
     } catch (error) {
         res.status(error.status).send({ status: "failed", error: error });
     }
