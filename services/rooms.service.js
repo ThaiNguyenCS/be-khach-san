@@ -295,10 +295,10 @@ class RoomService {
             VALUES ('${newRoomId}', '${branchId}', '${type}', '${description}', ${capacity}, ${roomNumber})`;
 
             await database.query(INSERT_ROOM_QUERY);
-            if (process.env.NODE_ENV === "deployment") {
-                if (type === "normal") await database.query(`CALL InsertPriceListFor30Days ('${newRoomId}', 500000)`);
-                else await database.query(`CALL InsertPriceListFor30Days ('${newRoomId}', 1000000)`);
-            }
+            // if (process.env.NODE_ENV === "deployment") {
+            //     if (type === "normal") await database.query(`CALL InsertPriceListFor30Days ('${newRoomId}', 500000)`);
+            //     else await database.query(`CALL InsertPriceListFor30Days ('${newRoomId}', 1000000)`);
+            // }
             return true;
         } catch (error) {
             throw createHttpError(500, error.message);
