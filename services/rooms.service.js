@@ -146,7 +146,6 @@ class RoomService {
                  ${condition.length > 0 ? `AND ${condition.join(" AND ")}` : ""}
                 LIMIT ${limit}
                 OFFSET ${limit * (page - 1)}`;
-            console.log(QUERY);
 
             let COUNT_QUERY = `SELECT COUNT(*) as total FROM Phong P WHERE NOT EXISTS (
                 SELECT * FROM BanGhiPhong BG 
@@ -158,6 +157,16 @@ class RoomService {
                  ${condition.length > 0 ? `AND ${condition.join(" AND ")}` : ""}`;
 
             const [result] = await database.query(QUERY);
+            for (let i = 0; i < result.length; i++) {
+                let SERVICE_QUERY = `SELECT TNP.Ten, TNP.Mota FROM TienNghiPhong_Phong TNP_P JOIN TienNghiPhong TNP ON
+                TNP.ID = TNP_P.MaTienNghi WHERE MaPhong = '${result[i].MaPhong}'`;
+                let FACILITIES_QUERY = `SELECT CSVCP.TenTrangBi, CSVCP.imageURL FROM CoSoVatChatPhong CSVCP WHERE MaPhong = '${result[i].MaPhong}'`;
+                const [service] = await database.query(SERVICE_QUERY);
+                const [facility] = await database.query(FACILITIES_QUERY);
+                result[i].services = service;
+                result[i].facilities = facility;
+            }
+
             const [total] = await database.query(COUNT_QUERY);
             if (result.length > 0) {
                 for (let i = 0; i < result.length; i++) {
