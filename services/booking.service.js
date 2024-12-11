@@ -19,17 +19,19 @@ class BookingService {
                     throw createHttpError(404, `Không tồn tại khách hàng với số điện thoại ${cusPhoneNumber}`);
                 }
             }
-            const ORDER_QUERY = `SELECT * FROM DonDatPhong ${condition}`;
+            const ORDER_QUERY = `SELECT * FROM DonDatPhong ${condition} LIMIT ${limit} OFFSET ${(page - 1) * limit}`;
+            const COUNT_QUERY = `SELECT COUNT(*) as total FROM DonDatPhong ${condition}`;
             const [orders] = await database.query(ORDER_QUERY);
+            const [count] = await database.query(COUNT_QUERY);
             if (orders.length > 0) {
                 const promises = [];
                 for (let i = 0; i < orders.length; i++) {
                     promises.push(this.getOrderById(orders[i].MaDon));
                 }
                 const result = await Promise.all(promises);
-                return result;
+                return { data: result, limit, page, total: count[0].total };
             }
-            return [];
+            return { data: [], limit, page, total: count[0].total };
         } catch (error) {
             if (error.status) throw error;
             throw createHttpError(500, error.message);

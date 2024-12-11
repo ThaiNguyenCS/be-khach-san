@@ -11,7 +11,7 @@ const router = express.Router();
 router.get("/all", async (req, res) => {
     try {
         const result = await bookingService.getAllOrders(req.query);
-        res.send({ status: "success", data: result });
+        res.send({ status: "success", ...result });
     } catch (error) {
         console.log(error.message);
         res.status(500).send({ status: "failed", error: error });
