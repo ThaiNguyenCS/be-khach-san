@@ -442,11 +442,11 @@ class RoomService {
             if (distance) distance = parseInt(distance);
             const order = await this.getRoomServiceOrder({ orderId, type });
             // Check order status first
-            if (order[0].TrangThai !== "not completed") {
+            if (order.TrangThai !== "not completed") {
                 throw createHttpError(403, "Đơn đã hủy hoặc hoàn thành không thể được cập nhật");
             }
             // Get service info
-            const service = await this.getRoomServiceInfo({ type, serviceId: order[0].MaDichVu });
+            const service = await this.getRoomServiceInfo({ type, serviceId: order.MaDichVu });
 
             switch (type) {
                 case "laundry": {

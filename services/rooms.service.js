@@ -294,7 +294,7 @@ class RoomService {
                 let fEndDate = formatDate(endDate, "yyyy-MM-dd");
                 const PRICE_QUERY = `SELECT * FROM BangGia WHERE MaPhong = '${roomId}' AND 
                 ThoiGianBatDauApDung >= DATE('${fStartDate}') AND ThoiGianBatDauApDung <= DATE('${fEndDate}')`;
-                console.log(PRICE_QUERY);
+                // console.log(PRICE_QUERY);
 
                 let [prices] = await database.query(PRICE_QUERY);
                 let _discount = null;
