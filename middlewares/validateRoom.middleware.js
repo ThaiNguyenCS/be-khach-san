@@ -18,6 +18,8 @@ const validateRoom = async (req, res, next) => {
 
 const verifyRoomsThatAvailable = async (req, res, next) => {
     try {
+
+
         await roomsService._verifyRoomsForOrder({
             startDate: req.body.checkInDate,
             endDate: req.body.checkOutDate,

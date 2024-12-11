@@ -14,10 +14,11 @@ class BookingService {
             let customer = null;
             if (cusPhoneNumber) {
                 customer = await customerService.findCustomerByPhoneNumber(cusPhoneNumber);
-                condition = ` WHERE IDKhachHang = '${customer.ID}'`;
                 if (!customer) {
                     throw createHttpError(404, `Không tồn tại khách hàng với số điện thoại ${cusPhoneNumber}`);
                 }
+                condition = ` WHERE IDKhachHang = '${customer.ID}'`;
+                
             }
             const ORDER_QUERY = `SELECT * FROM DonDatPhong ${condition} LIMIT ${limit} OFFSET ${(page - 1) * limit}`;
             const COUNT_QUERY = `SELECT COUNT(*) as total FROM DonDatPhong ${condition}`;
