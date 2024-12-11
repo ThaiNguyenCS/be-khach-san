@@ -13,7 +13,7 @@ const discountRouter = require("./routes/discount.route");
 var cors = require("cors");
 const morgan = require("morgan");
 const CORS_OPTION = {
-    origin: ["http://localhost:3000"],
+    origin: ["http://localhost:3000, https://dbd1-115-79-30-18.ngrok-free.app"],
     credentials: true,
 };
 app.use(cors(CORS_OPTION));
