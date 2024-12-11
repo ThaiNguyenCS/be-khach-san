@@ -165,6 +165,7 @@ class RoomService {
                 const [facility] = await database.query(FACILITIES_QUERY);
                 result[i].services = service;
                 result[i].facilities = facility;
+                
             }
 
             const [total] = await database.query(COUNT_QUERY);
