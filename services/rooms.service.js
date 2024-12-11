@@ -111,7 +111,9 @@ class RoomService {
 
                 console.log(QUERY);
                 const [result] = await database.query(QUERY);
-                
+                if (result.length !== roomIds.length) {
+                    throw createHttpError(400, "Trong đơn đặt có phòng không có sẵn");
+                }
                 return result;
             } else {
                 throw createHttpError(400, "Không có phòng nào được chọn");

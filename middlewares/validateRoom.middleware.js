@@ -18,18 +18,18 @@ const validateRoom = async (req, res, next) => {
 
 const verifyRoomsThatAvailable = async (req, res, next) => {
     try {
-        const result = await roomsService._verifyRoomsForOrder({
+        await roomsService._verifyRoomsForOrder({
             startDate: req.body.checkInDate,
             endDate: req.body.checkOutDate,
             roomIds: req.body.roomIds,
         });
         // console.log(result);
-        res.send({ status: "success", data: result });
+        next();
     } catch (error) {
         if (error.status) {
-            res.status(error.status).send({ status: "failed", message: error.message });
+            return res.status(error.status).send({ status: "failed", message: error.message });
         }
-        res.status(500).send({ status: "failed", message: error.message });
+        return res.status(500).send({ status: "failed", message: error.message });
     }
 };
 
