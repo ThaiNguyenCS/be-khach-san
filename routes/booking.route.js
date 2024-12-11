@@ -4,6 +4,7 @@ const { generateUUIDV4 } = require("../utils/idManager");
 const roomsService = require("../services/rooms.service");
 const bookingService = require("../services/booking.service");
 const room_serviceService = require("../services/room_service.service");
+const { verifyRoomsThatAvailable } = require("../middlewares/validateRoom.middleware");
 const router = express.Router();
 
 // Lấy tất cả đơn đặt phòng cho khách
@@ -47,7 +48,7 @@ router.delete("/room-service/:orderId", async (req, res) => {
 router.get("/room-service", async (req, res) => {
     try {
         const result = await room_serviceService.getServiceOrderOfRoomRecord(req.query);
-        res.send({status: "success", data: result})
+        res.send({ status: "success", data: result });
     } catch (error) {
         res.status(error.status).send({ status: "failed", error: error });
     }
@@ -56,7 +57,7 @@ router.get("/room-service", async (req, res) => {
 // Đặt đơn sử dụng dịch vụ
 router.post("/room-service", async (req, res) => {
     try {
-        console.log("here")
+        console.log("here");
         const result = await room_serviceService.createServiceOrderForRoomRecord(req.body);
         res.send({ status: "success", message: "Tạo đơn sử dụng dịch vụ thành công" });
     } catch (error) {
@@ -87,7 +88,7 @@ router.get("/:orderId", async (req, res) => {
 });
 
 // booking rooms
-router.post("/", async (req, res) => {
+router.post("/", verifyRoomsThatAvailable, async (req, res) => {
     let { roomIds, checkInDate, checkOutDate, cusName, cusPhoneNumber, cusCitizenId, cusSex, cusDOB, deposit } =
         req.body;
     if (deposit) deposit = parseInt(deposit);
@@ -103,7 +104,8 @@ router.post("/", async (req, res) => {
         await connection.beginTransaction();
         const FIND_CUS_QUERY = `SELECT * FROM KhachHang WHERE SoDienThoai = '${cusPhoneNumber}'`;
         const [customer] = await connection.query(FIND_CUS_QUERY);
-        
+        console.log(FIND_CUS_QUERY);
+
         let cusId = customer[0]?.ID;
         if (customer.length === 0) {
             cusId = generateUUIDV4();
@@ -115,12 +117,15 @@ router.post("/", async (req, res) => {
             '${cusPhoneNumber}',
             '${cusDOB}',
             '${cusSex}')`;
+            console.log(ADD_CUS_QUERY);
             await connection.query(ADD_CUS_QUERY);
         }
 
         let orderId = generateUUIDV4();
         // Tạo đơn đặt phòng
         const BOOKING_QUERY = `INSERT INTO DonDatPhong (MaDon, IDKhachHang, ThoiGianDat, TrangThaiDon, NgayNhanPhong, NgayTraPhong, Nguon, SoTienDatCoc) VALUES ('${orderId}', '${cusId}', NOW(), 'not confirmed', DATE('${checkInDate}'), DATE('${checkOutDate}') , 'Website', ${deposit})`;
+        console.log(BOOKING_QUERY);
+
         await connection.query(BOOKING_QUERY);
 
         // Tạo bản ghi phòng

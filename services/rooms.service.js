@@ -84,10 +84,97 @@ class RoomService {
         } catch (error) {}
     }
 
+    async _verifyRoomsForOrder(query) {
+        let { startDate, endDate, roomIds } = query;
+        try {
+            checkMissingField("startDate", startDate);
+            checkMissingField("endDate", endDate);
+            checkMissingField("roomIds", roomIds);
+            roomIds = JSON.parse(roomIds);
+            if (roomIds.length > 0) {
+                const condition = [];
+                condition.push(`P.TrangThai != 'maintenance'`);
+                condition;
+
+                const QUERY = `
+                        SELECT P.* FROM Phong P WHERE NOT EXISTS (
+                        SELECT * FROM BanGhiPhong BG 
+                        JOIN DonDatPhong DDP ON BG.MaDatPhong = DDP.MaDon
+                        WHERE BG.MaPhong = P.MaPhong AND
+                        DDP.TrangThaiDon != 'cancelled' AND 
+                        DATE('${startDate}') <= DDP.NgayTraPhong AND
+                        DATE('${endDate}') >= DDP.NgayNhanPhong
+                        )
+                        AND P.MaPhong IN (${roomIds.map((room) => `'${room}'`).join(", ")})
+                        ${condition.length > 0 ? `AND ${condition.join(" AND ")}` : ""}
+                        `;
+
+                console.log(QUERY);
+                const [result] = await database.query(QUERY);
+                
+                return result;
+            } else {
+                throw createHttpError(400, "Không có phòng nào được chọn");
+            }
+        } catch (error) {
+            if (error.status) throw error;
+            throw createHttpError(500, error.message);
+        }
+    }
+
+    async getAvailableRoomsForPeriod(query) {
+        let { startDate, endDate, branchId, limit = 20, page = 1 } = query;
+        limit = parseInt(limit);
+        page = parseInt(page);
+        try {
+            checkMissingField("startDate", startDate);
+            checkMissingField("endDate", endDate);
+            const condition = [];
+            condition.push(`P.TrangThai != 'maintenance'`);
+            if (branchId) {
+                condition.push(`P.MaChiNhanh = '${branchId}'`);
+            }
+            let QUERY = `SELECT P.* FROM Phong P WHERE NOT EXISTS (
+                SELECT * FROM BanGhiPhong BG 
+                JOIN DonDatPhong DDP ON BG.MaDatPhong = DDP.MaDon
+                WHERE BG.MaPhong = P.MaPhong AND
+                DDP.TrangThaiDon != 'cancelled' AND 
+                DATE('${startDate}') <= DDP.NgayTraPhong AND
+                DATE('${endDate}') >= DDP.NgayNhanPhong)
+                 ${condition.length > 0 ? `AND ${condition.join(" AND ")}` : ""}
+                LIMIT ${limit}
+                OFFSET ${limit * (page - 1)}`;
+            console.log(QUERY);
+
+            let COUNT_QUERY = `SELECT COUNT(*) as total FROM Phong P WHERE NOT EXISTS (
+                SELECT * FROM BanGhiPhong BG 
+                JOIN DonDatPhong DDP ON BG.MaDatPhong = DDP.MaDon
+                WHERE BG.MaPhong = P.MaPhong AND
+                DDP.TrangThaiDon != 'cancelled' AND 
+                DATE('${startDate}') <= DDP.NgayTraPhong AND
+                DATE('${endDate}') >= DDP.NgayNhanPhong)
+                 ${condition.length > 0 ? `AND ${condition.join(" AND ")}` : ""}`;
+
+            const [result] = await database.query(QUERY);
+            const [total] = await database.query(COUNT_QUERY);
+            if (result.length > 0) {
+                for (let i = 0; i < result.length; i++) {
+                    const prices = await this.getPriceOfRoomForEachDay(result[i].MaPhong, startDate, endDate);
+                    result[i].GiaPhong = prices;
+                }
+            }
+            return { data: result, limit, page, total: total[0].total };
+        } catch (error) {
+            if (error.status) {
+                throw error;
+            }
+            throw createHttpError(500, error.message);
+        }
+    }
 
     async addConsumerGoodToRoom(roomId, data) {
         let { goodId, quantity } = data;
- 
+
         const connection = await database.getConnection();
         await connection.beginTransaction();
         try {
@@ -156,7 +243,7 @@ class RoomService {
                 const [result] = await database.query(QUERY);
                 results.push({ month: monthYearPairs[i][0], year: monthYearPairs[i][1], data: result[0] });
             }
-            return results
+            return results;
         } catch (error) {
             if (!error.status) throw createHttpError(500, error.message);
             throw error;
