@@ -165,7 +165,6 @@ class RoomService {
                 const [facility] = await database.query(FACILITIES_QUERY);
                 result[i].services = service;
                 result[i].facilities = facility;
-                
             }
 
             const [total] = await database.query(COUNT_QUERY);
@@ -427,19 +426,31 @@ class RoomService {
 
     async updateOrderStatus(orderId, data) {
         let { action } = data;
-        const order = await this.roomsService.getOrder(orderId);
-        if (order) {
-            if (order.TrangThai === "cancelled") {
-                throw createHttpError(403, "Order is cancelled, its status cannot be changed");
-            } else {
-                let UPDATE_ORDER_QUERY = `UPDATE DonDatPhong SET TrangThaiDon = ${
-                    action === "accept" ? "confirmed" : action === "refuse" ? "cancelled" : "not confirmed"
-                } WHERE MaDon = '${orderId}'`;
-                const [result] = await database.query(UPDATE_ORDER_QUERY);
-                return result;
+        try {
+            checkMissingField("action", action)
+            if(action !== 'refuse' && action !== 'accept')
+            {
+                throw createHttpError(400, `action phải là refuse hoặc accept`)
             }
-        } else {
-            throw createHttpError(404, "Order does not exist");
+            const order = await this.getOrder(orderId);
+            if (order) {
+                if (order.TrangThai === "cancelled") {
+                    throw createHttpError(403, "Order is cancelled, its status cannot be changed");
+                } else {
+                    let UPDATE_ORDER_QUERY = `UPDATE DonDatPhong SET TrangThaiDon = ${
+                        action === 'accept' ? `'confirmed'` : action === 'refuse' ? `'cancelled'` : `'not confirmed'`
+                    } WHERE MaDon = '${orderId}'`;
+                    console.log(UPDATE_ORDER_QUERY);
+                    const [result] = await database.query(UPDATE_ORDER_QUERY);
+                    return result;
+                }
+            }
+            throw createHttpError(404, "Không tìm thấy đơn đặt phòng")
+        } catch (error) {
+            if (error.status) {
+                throw error;
+            }
+            throw createHttpError(500, error.message);
         }
     }
 
@@ -602,10 +613,9 @@ class RoomService {
         let { goods = "[]", brokenFacilities = "[]" } = data;
 
         const connection = await database.getConnection();
-
+        console.log("goods", goods);
         try {
             goods = JSON.parse(goods);
-            console.log(goods);
             brokenFacilities = JSON.parse(brokenFacilities);
             const record = await this.findRoomRecord(roomId, recordCreatedTime);
             if (record.length > 0) {

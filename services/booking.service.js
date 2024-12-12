@@ -3,6 +3,7 @@ const { database } = require("../database");
 const customerService = require("./customer.service");
 const roomsService = require("./rooms.service");
 const room_serviceService = require("./room_service.service");
+const { checkMissingField } = require("../utils/errorHandler");
 
 class BookingService {
     async getAllOrders(query) {
@@ -58,14 +59,7 @@ class BookingService {
         }
     }
 
-    async completeOrderByIdForCheckout(orderId)
-    {
-        try {
-            
-        } catch (error) {
-            
-        }
-    }
+  
 
     async getOrderByIdForCheckout(orderId) {
         try {

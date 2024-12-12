@@ -5,6 +5,8 @@ const roomsService = require("../services/rooms.service");
 const bookingService = require("../services/booking.service");
 const room_serviceService = require("../services/room_service.service");
 const { verifyRoomsThatAvailable } = require("../middlewares/validateRoom.middleware");
+const { validateOrder } = require("../middlewares/validateOrder.middleware");
+const receiptService = require("../services/receipt.service");
 const router = express.Router();
 
 // Lấy tất cả đơn đặt phòng cho khách
@@ -65,7 +67,18 @@ router.post("/room-service", async (req, res) => {
     }
 });
 
-// Lấy đơn đặt phòng cụ thể
+// Hoàn thành đơn đặt phòng
+router.post("/:orderId/checkout", validateOrder, async (req, res) => {
+    try {
+        const result = await receiptService.generateReceiptForOrder(req.params.orderId);
+        res.send({ status: "success", message: `Tạo hóa đơn cho đơn đặt phòng ${req.params.orderId} thành công!` });
+    } catch (error) {
+        console.log(error.message);
+        res.status(500).send({ status: "failed", error: error });
+    }
+});
+
+// Lấy đơn đặt phòng cụ thể để checkout
 router.get("/:orderId/checkout", async (req, res) => {
     try {
         const result = await bookingService.getOrderByIdForCheckout(req.params.orderId);
@@ -84,6 +97,17 @@ router.get("/:orderId", async (req, res) => {
     } catch (error) {
         console.log(error.message);
         res.status(500).send({ status: "failed", error: error });
+    }
+});
+
+// for receptionist
+router.patch("/:orderId", async (req, res) => {
+    let orderId = req.params.orderId;
+    try {
+        const result = await roomsService.updateOrderStatus(orderId, req.body);
+        res.send({ status: "success", message: "Update order successfully" });
+    } catch (error) {
+        res.status(error.status).send({ status: "failed", message: error.message });
     }
 });
 
@@ -140,15 +164,5 @@ router.post("/", verifyRoomsThatAvailable, async (req, res) => {
     }
 });
 
-// for receptionist
-router.patch("/:orderId", async (req, res) => {
-    let orderId = req.params.orderId;
-    try {
-        const result = await roomsService.updateOrderStatus(orderId, req.body);
-        res.send({ status: "success", message: "Update order successfully" });
-    } catch (error) {
-        res.status(error.status).send({ status: "failed", message: error.message });
-    }
-});
 
 module.exports = router;

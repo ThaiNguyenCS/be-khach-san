@@ -105,11 +105,11 @@ router.get("/all", async (req, res) => {
     }
 });
 
-router.get("/test", async (req, res) => {
-    let { startDate, endDate } = req.query;
-    const result = await roomsService.getPriceOfRoom("9eae74ec-380e-493c-a489-90084a56756e", startDate, endDate);
-    res.send(result);
-});
+// router.get("/test", async (req, res) => {
+//     let { startDate, endDate } = req.query;
+//     const result = await roomsService.getPriceOfRoom("9eae74ec-380e-493c-a489-90084a56756e", startDate, endDate);
+//     res.send(result);
+// });
 
 // Thêm đồ dùng vào phòng
 router.post("/:roomId/goods", async (req, res) => {
