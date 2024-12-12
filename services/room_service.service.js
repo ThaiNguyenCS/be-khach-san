@@ -248,8 +248,9 @@ class RoomService {
                 }
             }
             const [result] = await database.query(QUERY);
-            if (result.length > 0) {
-                return result[0];
+            // cái này do procedure trả về result[1] là metadata
+            if (result.length > 0 && result[0].length > 0) {
+                return result[0][0];
             } else {
                 throw createHttpError(404, "Không tìm thấy dịch vụ");
             }
@@ -287,7 +288,7 @@ class RoomService {
                     throw createHttpError(400, "Loại dịch vụ không hợp lệ");
                 }
             }
-            if (result.length > 0) return result[0];
+            if (result.length > 0 && result[0].length > 0) return result[0][0];
             throw createHttpError(404, "Không tìm thấy đơn đặt dịch vụ");
         } catch (error) {
             if (error.status) throw error;
@@ -317,6 +318,7 @@ class RoomService {
             startTime,
             finishTime,
         } = body;
+        console.log(body);
         try {
             checkMissingField("type", type);
             checkMissingField("serviceId", serviceId);
@@ -328,7 +330,7 @@ class RoomService {
             if (distance) distance = parseInt(distance);
             const service = await this.getRoomServiceInfo({ type, serviceId });
             const newOrderId = generateUUIDV4();
-
+            console.log(service);
             switch (type) {
                 case "laundry": {
                     let totalBill = parseFloat(service.MucGia) * weight;
@@ -357,7 +359,6 @@ class RoomService {
                         NOW(),
                         '${departure}',
                         '${destination}',
-                        '${quantity}',
                         ${totalBill},
                         '${status}'
                         )`
@@ -366,6 +367,7 @@ class RoomService {
                 }
                 case "food": {
                     let totalBill = parseFloat(service.MucGia) * quantity;
+
                     await database.query(`CALL CreateDonDatDichVuAnUong(
                         '${newOrderId}', 
                         '${serviceId}', 
@@ -429,6 +431,8 @@ class RoomService {
             finishTime,
             distance,
         } = body;
+        console.log(body);
+
         try {
             checkMissingField("type", type);
             checkMissingField("orderId", orderId);
@@ -438,15 +442,21 @@ class RoomService {
             if (distance) distance = parseInt(distance);
             const order = await this.getRoomServiceOrder({ orderId, type });
             // Check order status first
-            if (order[0].TrangThai !== "not completed") {
+            if (order.TrangThai !== "not completed") {
                 throw createHttpError(403, "Đơn đã hủy hoặc hoàn thành không thể được cập nhật");
             }
             // Get service info
-            const service = await this.getRoomServiceInfo({ type, serviceId: order[0].MaDichVu });
+            const service = await this.getRoomServiceInfo({ type, serviceId: order.MaDichVu });
 
             switch (type) {
                 case "laundry": {
                     let totalBill = weight ? parseFloat(service.MucGia) * weight : null;
+                    console.log(`CALL UpdateDonSuDungDichVuGiatUi (
+                        '${orderId}', 
+                        ${handleParameterIfNull(weight)},
+                        ${handleParameterIfNull(totalBill)},
+                        ${handleParameterIfNull(status)}
+                        )`);
                     await database.query(
                         `CALL UpdateDonSuDungDichVuGiatUi (
                         '${orderId}', 
@@ -483,8 +493,8 @@ class RoomService {
                     let totalBill =
                         parseFloat(service.MucGia) *
                         differenceInHours(
-                            new Date(finishTime || order[0].ThoiGianKetThuc),
-                            new Date(startTime || order[0].ThoiGianBatDau),
+                            new Date(finishTime || order.ThoiGianKetThuc),
+                            new Date(startTime || order.ThoiGianBatDau),
                             {
                                 roundingMethod: "ceil",
                             }
@@ -492,8 +502,8 @@ class RoomService {
                     await database.query(
                         `CALL UpdateDonSuDungDichVuPhongHop(   
                         '${orderId}', 
-                        '${formatDate(new Date(startTime || order[0].ThoiGianBatDau), "yyyy-MM-dd HH:mm:ss")}',
-                        '${formatDate(new Date(finishTime || order[0].ThoiGianKetThuc), "yyyy-MM-dd HH:mm:ss")}',
+                        '${formatDate(new Date(startTime || order.ThoiGianBatDau), "yyyy-MM-dd HH:mm:ss")}',
+                        '${formatDate(new Date(finishTime || order.ThoiGianKetThuc), "yyyy-MM-dd HH:mm:ss")}',
                         ${totalBill},
                         '${status}')`
                     );

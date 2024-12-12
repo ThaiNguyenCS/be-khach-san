@@ -9,6 +9,50 @@ const { getDateArray } = require("../utils/date");
 const discountService = require("./discount.service");
 require("dotenv").config();
 class RoomService {
+    async generatePriceForAllRoomsInAMonth(data) {
+        let { month, year, normalRoomMinPrice, normalRoomPublicPrice, vipRoomMinPrice, vipRoomPublicPrice } = data;
+        try {
+            checkMissingField("month", month);
+            checkMissingField("year", year);
+            checkMissingField("normalRoomMinPrice", normalRoomMinPrice);
+            checkMissingField("normalRoomPublicPrice", normalRoomPublicPrice);
+            checkMissingField("vipRoomMinPrice", vipRoomMinPrice);
+            checkMissingField("vipRoomPublicPrice", vipRoomPublicPrice);
+            month = parseInt(month);
+            year = parseInt(year);
+            normalRoomMinPrice = parseFloat(normalRoomMinPrice);
+            normalRoomPublicPrice = parseFloat(normalRoomPublicPrice);
+            vipRoomMinPrice = parseFloat(vipRoomMinPrice);
+            vipRoomPublicPrice = parseFloat(vipRoomPublicPrice);
+            const QUERY = `CALL InsertDailyPricesByRoomType (${month}, ${year}, ${normalRoomMinPrice}, ${normalRoomPublicPrice}, ${vipRoomMinPrice}, ${vipRoomPublicPrice})`;
+            console.log(QUERY);
+            const [result] = await database.query(QUERY);
+            console.log(result);
+            return result;
+        } catch (error) {
+            if (error.status) throw error;
+            throw createHttpError(500, error.message);
+        }
+    }
+
+    async deletePriceOfAllRoomsInAMonth(query) {
+        let { month, year } = query;
+        try {
+            checkMissingField("month", month);
+            checkMissingField("year", year);
+            month = parseInt(month);
+            year = parseInt(year);
+            const QUERY = `CALL DeletePricesByMonth (${month}, ${year})`;
+            console.log(QUERY);
+            const [result] = await database.query(QUERY);
+            console.log(result);
+            return result;
+        } catch (error) {
+            if (error.status) throw error;
+            throw createHttpError(500, error.message);
+        }
+    }
+
     async getAllRooms(query) {
         let { limit = 20, page = 1, branchId, status, type } = query;
         try {
@@ -40,13 +84,113 @@ class RoomService {
         } catch (error) {}
     }
 
+    async _verifyRoomsForOrder(query) {
+        let { startDate, endDate, roomIds } = query;
+        try {
+            checkMissingField("startDate", startDate);
+            checkMissingField("endDate", endDate);
+            checkMissingField("roomIds", roomIds);
+            roomIds = JSON.parse(roomIds);
+            if (roomIds.length > 0) {
+                const condition = [];
+                condition.push(`P.TrangThai != 'maintenance'`);
+                condition;
+
+                const QUERY = `
+                        SELECT P.* FROM Phong P WHERE NOT EXISTS (
+                        SELECT * FROM BanGhiPhong BG 
+                        JOIN DonDatPhong DDP ON BG.MaDatPhong = DDP.MaDon
+                        WHERE BG.MaPhong = P.MaPhong AND
+                        DDP.TrangThaiDon != 'cancelled' AND 
+                        DATE('${startDate}') <= DDP.NgayTraPhong AND
+                        DATE('${endDate}') >= DDP.NgayNhanPhong
+                        )
+                        AND P.MaPhong IN (${roomIds.map((room) => `'${room}'`).join(", ")})
+                        ${condition.length > 0 ? `AND ${condition.join(" AND ")}` : ""}
+                        `;
+
+                console.log(QUERY);
+                const [result] = await database.query(QUERY);
+                if (result.length !== roomIds.length) {
+                    throw createHttpError(400, "Trong đơn đặt có phòng không có sẵn");
+                }
+                return result;
+            } else {
+                throw createHttpError(400, "Không có phòng nào được chọn");
+            }
+        } catch (error) {
+            if (error.status) throw error;
+            throw createHttpError(500, error.message);
+        }
+    }
+
+    async getAvailableRoomsForPeriod(query) {
+        let { startDate, endDate, branchId, limit = 20, page = 1 } = query;
+        limit = parseInt(limit);
+        page = parseInt(page);
+        try {
+            checkMissingField("startDate", startDate);
+            checkMissingField("endDate", endDate);
+            const condition = [];
+            condition.push(`P.TrangThai != 'maintenance'`);
+            if (branchId) {
+                condition.push(`P.MaChiNhanh = '${branchId}'`);
+            }
+            let QUERY = `SELECT P.* FROM Phong P WHERE NOT EXISTS (
+                SELECT * FROM BanGhiPhong BG 
+                JOIN DonDatPhong DDP ON BG.MaDatPhong = DDP.MaDon
+                WHERE BG.MaPhong = P.MaPhong AND
+                DDP.TrangThaiDon != 'cancelled' AND 
+                DATE('${startDate}') <= DDP.NgayTraPhong AND
+                DATE('${endDate}') >= DDP.NgayNhanPhong)
+                 ${condition.length > 0 ? `AND ${condition.join(" AND ")}` : ""}
+                LIMIT ${limit}
+                OFFSET ${limit * (page - 1)}`;
+
+            let COUNT_QUERY = `SELECT COUNT(*) as total FROM Phong P WHERE NOT EXISTS (
+                SELECT * FROM BanGhiPhong BG 
+                JOIN DonDatPhong DDP ON BG.MaDatPhong = DDP.MaDon
+                WHERE BG.MaPhong = P.MaPhong AND
+                DDP.TrangThaiDon != 'cancelled' AND 
+                DATE('${startDate}') <= DDP.NgayTraPhong AND
+                DATE('${endDate}') >= DDP.NgayNhanPhong)
+                 ${condition.length > 0 ? `AND ${condition.join(" AND ")}` : ""}`;
+
+            const [result] = await database.query(QUERY);
+            for (let i = 0; i < result.length; i++) {
+                let SERVICE_QUERY = `SELECT TNP.Ten, TNP.Mota FROM TienNghiPhong_Phong TNP_P JOIN TienNghiPhong TNP ON
+                TNP.ID = TNP_P.MaTienNghi WHERE MaPhong = '${result[i].MaPhong}'`;
+                let FACILITIES_QUERY = `SELECT CSVCP.TenTrangBi, CSVCP.imageURL FROM CoSoVatChatPhong CSVCP WHERE MaPhong = '${result[i].MaPhong}'`;
+                const [service] = await database.query(SERVICE_QUERY);
+                const [facility] = await database.query(FACILITIES_QUERY);
+                result[i].services = service;
+                result[i].facilities = facility;
+            }
+
+            const [total] = await database.query(COUNT_QUERY);
+            if (result.length > 0) {
+                for (let i = 0; i < result.length; i++) {
+                    const prices = await this.getPriceOfRoomForEachDay(result[i].MaPhong, startDate, endDate);
+                    result[i].GiaPhong = prices;
+                }
+            }
+            return { data: result, limit, page, total: total[0].total };
+        } catch (error) {
+            if (error.status) {
+                throw error;
+            }
+            throw createHttpError(500, error.message);
+        }
+    }
+
     async addConsumerGoodToRoom(roomId, data) {
         let { goodId, quantity } = data;
-        checkMissingField("goodId", goodId);
-        checkMissingField("quantity", quantity);
+
         const connection = await database.getConnection();
         await connection.beginTransaction();
         try {
+            checkMissingField("goodId", goodId);
+            checkMissingField("quantity", quantity);
             const goodInRoom = await consumerGoodService.findGoodInRoom(roomId, goodId);
             const goodInWareHouse = await consumerGoodService.getGoodById(goodId);
             quantity = parseInt(quantity);
@@ -87,6 +231,35 @@ class RoomService {
     }
 
     // use when receptionist accept the order
+    async getPriceOfRoomInMonths(query) {
+        let { roomId, months } = query;
+        try {
+            checkMissingField("roomId", roomId);
+            checkMissingField("months", months);
+            months = JSON.parse(months);
+
+            let monthYearPairs = months.map((date) => [new Date(date).getMonth() + 1, new Date(date).getFullYear()]);
+            // lấy các cặp tháng, năm unique
+            monthYearPairs = Array.from(new Set(monthYearPairs.map((date) => JSON.stringify(date)))).map((dateStr) =>
+                JSON.parse(dateStr)
+            );
+            console.log(monthYearPairs);
+            if (monthYearPairs.length === 0) {
+                throw createHttpError(400, "Vui lòng chọn (các) tháng để xem bảng giá");
+            }
+            const results = [];
+            for (let i = 0; i < monthYearPairs.length; i++) {
+                const QUERY = `CALL GetPriceOfRoomInMonth('${roomId}', ${monthYearPairs[i][0]},  ${monthYearPairs[i][1]})`;
+                console.log(QUERY);
+                const [result] = await database.query(QUERY);
+                results.push({ month: monthYearPairs[i][0], year: monthYearPairs[i][1], data: result[0] });
+            }
+            return results;
+        } catch (error) {
+            if (!error.status) throw createHttpError(500, error.message);
+            throw error;
+        }
+    }
 
     async getTotalPriceOfRoom(roomId, startDate, endDate) {
         await this.getRoom(roomId);
@@ -120,7 +293,7 @@ class RoomService {
                 let fEndDate = formatDate(endDate, "yyyy-MM-dd");
                 const PRICE_QUERY = `SELECT * FROM BangGia WHERE MaPhong = '${roomId}' AND 
                 ThoiGianBatDauApDung >= DATE('${fStartDate}') AND ThoiGianBatDauApDung <= DATE('${fEndDate}')`;
-                console.log(PRICE_QUERY);
+                // console.log(PRICE_QUERY);
 
                 let [prices] = await database.query(PRICE_QUERY);
                 let _discount = null;
@@ -179,7 +352,7 @@ class RoomService {
         if (connection) {
             const ORDER_QUERY = `SELECT * FROM DonDatPhong DDP WHERE DDP.MaDon = '${orderId}'`;
             const [order] = await connection.query(ORDER_QUERY);
-            console.log(order)
+            console.log(order);
             let ROOM_RECORD_ADD_QUERY = `INSERT INTO BanGhiPhong (MaPhong , ThoiGianTaoBanGhiPhong , MaDatPhong , GiaTien) VALUES`;
             try {
                 for (let i = 0; i < roomIds.length; i++) {
@@ -253,19 +426,31 @@ class RoomService {
 
     async updateOrderStatus(orderId, data) {
         let { action } = data;
-        const order = await this.roomsService.getOrder(orderId);
-        if (order) {
-            if (order.TrangThai === "cancelled") {
-                throw createHttpError(403, "Order is cancelled, its status cannot be changed");
-            } else {
-                let UPDATE_ORDER_QUERY = `UPDATE DonDatPhong SET TrangThaiDon = ${
-                    action === "accept" ? "confirmed" : action === "refuse" ? "cancelled" : "not confirmed"
-                } WHERE MaDon = '${orderId}'`;
-                const [result] = await database.query(UPDATE_ORDER_QUERY);
-                return result;
+        try {
+            checkMissingField("action", action)
+            if(action !== 'refuse' && action !== 'accept')
+            {
+                throw createHttpError(400, `action phải là refuse hoặc accept`)
             }
-        } else {
-            throw createHttpError(404, "Order does not exist");
+            const order = await this.getOrder(orderId);
+            if (order) {
+                if (order.TrangThai === "cancelled") {
+                    throw createHttpError(403, "Order is cancelled, its status cannot be changed");
+                } else {
+                    let UPDATE_ORDER_QUERY = `UPDATE DonDatPhong SET TrangThaiDon = ${
+                        action === 'accept' ? `'confirmed'` : action === 'refuse' ? `'cancelled'` : `'not confirmed'`
+                    } WHERE MaDon = '${orderId}'`;
+                    console.log(UPDATE_ORDER_QUERY);
+                    const [result] = await database.query(UPDATE_ORDER_QUERY);
+                    return result;
+                }
+            }
+            throw createHttpError(404, "Không tìm thấy đơn đặt phòng")
+        } catch (error) {
+            if (error.status) {
+                throw error;
+            }
+            throw createHttpError(500, error.message);
         }
     }
 
@@ -295,10 +480,10 @@ class RoomService {
             VALUES ('${newRoomId}', '${branchId}', '${type}', '${description}', ${capacity}, ${roomNumber})`;
 
             await database.query(INSERT_ROOM_QUERY);
-            if (process.env.NODE_ENV === "deployment") {
-                if (type === "normal") await database.query(`CALL InsertPriceListFor30Days ('${newRoomId}', 500000)`);
-                else await database.query(`CALL InsertPriceListFor30Days ('${newRoomId}', 1000000)`);
-            }
+            // if (process.env.NODE_ENV === "deployment") {
+            //     if (type === "normal") await database.query(`CALL InsertPriceListFor30Days ('${newRoomId}', 500000)`);
+            //     else await database.query(`CALL InsertPriceListFor30Days ('${newRoomId}', 1000000)`);
+            // }
             return true;
         } catch (error) {
             throw createHttpError(500, error.message);
@@ -428,10 +613,9 @@ class RoomService {
         let { goods = "[]", brokenFacilities = "[]" } = data;
 
         const connection = await database.getConnection();
-
+        console.log("goods", goods);
         try {
             goods = JSON.parse(goods);
-            console.log(goods);
             brokenFacilities = JSON.parse(brokenFacilities);
             const record = await this.findRoomRecord(roomId, recordCreatedTime);
             if (record.length > 0) {

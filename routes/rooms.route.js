@@ -3,12 +3,28 @@ const { database } = require("../database");
 const roomsService = require("../services/rooms.service");
 const { validateDiscount } = require("../middlewares/validateDiscount.middleware.");
 const { getDateArray } = require("../utils/date");
+const { validateRoom } = require("../middlewares/validateRoom.middleware");
+const consumer_goodsService = require("../services/consumer_goods.service");
 const router = express.Router();
 
 // Get available rooms given startDate, endDate, number of persons
 /*
     Lấy tất cả các id phòng và trừ đi các phòng có bản ghi phòng occupied từ startDate tới endDate
 */
+
+// Xóa đồ tiêu dùng khỏi phòng
+router.delete("/:roomId/goods/:goodId", async (req, res) => {
+    try {
+        const result = await consumer_goodsService.deleteGoodOutOfRoom({
+            roomId: req.params.roomId,
+            goodId: req.params.goodId,
+        });
+        res.send({ status: "success", message: "Xóa đồ tiêu dùng khỏi phòng thành công" });
+    } catch (error) {
+        console.log(error);
+        res.status(error.status).send({ status: "failed", error: error.message });
+    }
+});
 
 // Tạo bản báo cáo phòng
 router.post("/:roomId/:createdTime/report", async (req, res) => {
@@ -39,30 +55,40 @@ router.post("/:roomId/discount", validateDiscount, async (req, res) => {
     }
 });
 
-router.get("/available", async (req, res) => {
-    let { startDate, endDate, quantity, limit = 20, page = 1 } = req.query;
-    limit = parseInt(limit);
-    page = parseInt(page);
+router.get("/:roomId/goods", async (req, res) => {
     try {
-        let QUERY = `SELECT P.* FROM Phong P WHERE NOT EXISTS (
-            SELECT * FROM BanGhiPhong BG 
-            JOIN DonDatPhong DDP ON BG.MaDatPhong = DDP.MaDon
-            WHERE BG.MaPhong = P.MaPhong AND
-            DDP.TrangThaiDon != 'cancelled' AND
-            DATE('${startDate}') <= DDP.NgayTraPhong AND
-            DATE('${endDate}') >= DDP.NgayNhanPhong)
-            LIMIT ${limit}
-            OFFSET ${limit * (page - 1)}`;
-        console.log(QUERY);
-
-        const [result] = await database.query(QUERY);
-        if (result.length > 0) {
-            for (let i = 0; i < result.length; i++) {
-                const prices = await roomsService.getPriceOfRoomForEachDay(result[i].MaPhong, startDate, endDate);
-                result[i].GiaPhong = prices;
-            }
-        }
+        const result = await consumer_goodsService.findGoodsInRoom(req.params.roomId);
         res.send({ status: "success", data: result });
+    } catch (error) {
+        res.status(error.status).send({ status: "failed", error: error.message });
+    }
+});
+
+router.post("/price/all", async (req, res) => {
+    try {
+        const result = await roomsService.generatePriceForAllRoomsInAMonth(req.body);
+        res.send({ status: "success", message: "Tạo bảng giá cho tất cả các phòng thành công" });
+    } catch (error) {
+        res.status(error.status).send({ status: "failed", error: error.message });
+    }
+});
+
+router.delete("/price/all", async (req, res) => {
+    try {
+        const result = await roomsService.deletePriceOfAllRoomsInAMonth(req.query);
+        res.send({
+            status: "success",
+            message: `Xóa bảng giá cho tất cả các phòng trong tháng ${req.query.month}/${req.query.year} thành công`,
+        });
+    } catch (error) {
+        res.status(error.status).send({ status: "failed", error: error.message });
+    }
+});
+
+router.get("/available", async (req, res) => {
+    try {
+        const result = await roomsService.getAvailableRoomsForPeriod(req.query);
+        res.send({ status: "success", ...result });
     } catch (error) {
         res.status(500).send({ status: "failed", error: error.message });
     }
@@ -72,18 +98,18 @@ router.get("/available", async (req, res) => {
 router.get("/all", async (req, res) => {
     try {
         const result = await roomsService.getAllRooms(req.query);
-        console.log(result)
+        console.log(result);
         res.send({ status: "success", data: result.data, limit: result.limit, page: result.page, total: result.total });
     } catch (error) {
         res.status(500).send({ status: "failed", error: error.message });
     }
 });
 
-router.get("/test", async (req, res) => {
-    let { startDate, endDate } = req.query;
-    const result = await roomsService.getPriceOfRoom("9eae74ec-380e-493c-a489-90084a56756e", startDate, endDate);
-    res.send(result);
-});
+// router.get("/test", async (req, res) => {
+//     let { startDate, endDate } = req.query;
+//     const result = await roomsService.getPriceOfRoom("9eae74ec-380e-493c-a489-90084a56756e", startDate, endDate);
+//     res.send(result);
+// });
 
 // Thêm đồ dùng vào phòng
 router.post("/:roomId/goods", async (req, res) => {
@@ -124,7 +150,18 @@ router.post("/:roomId/amenities", async (req, res) => {
 });
 
 // Update room price
-router.patch("/:roomId/price", async (req, res) => {
+router.get("/:roomId/price", validateRoom, async (req, res) => {
+    let roomId = req.params.roomId;
+    try {
+        const result = await roomsService.getPriceOfRoomInMonths({ roomId, ...req.query });
+        res.status(200).send({ status: "success", data: result });
+    } catch (error) {
+        res.status(500).send({ status: "failed", error: error.message });
+    }
+});
+
+// Update room price
+router.patch("/:roomId/price", validateRoom, async (req, res) => {
     let roomId = req.params.roomId;
     try {
         const result = await roomsService.alterRoomPrice(roomId, req.body);

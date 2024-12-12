@@ -1,6 +1,7 @@
 var express = require("express");
 require("dotenv").config();
 const app = express();
+const compression = require('compression')
 const roomRouter = require("./routes/rooms.route");
 const amenityRouter = require("./routes/amenities.route");
 const bookingRouter = require("./routes/booking.route");
@@ -11,11 +12,15 @@ const faciliTyRouter = require("./routes/CoSoVatChat.route");
 const roomServiceRouter = require("./routes/room_service.route");
 const discountRouter = require("./routes/discount.route");
 var cors = require("cors");
+const morgan = require("morgan");
+const ORIGIN_LIST = ["http://localhost:3000"]
 const CORS_OPTION = {
     origin: ["http://localhost:3000"],
     credentials: true,
 };
+app.use(compression())
 app.use(cors(CORS_OPTION));
+app.use(morgan("tiny"));
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());

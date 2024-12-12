@@ -1,6 +1,6 @@
 function handleParameterIfNull(value) {
     if (value && typeof value === "string") {
-        return `"${value}"`;
+        return `'${value}'`;
     }
     if (value && typeof value === "number") {
         return parseFloat(value);

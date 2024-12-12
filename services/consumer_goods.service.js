@@ -4,35 +4,71 @@ const { checkMissingField } = require("../utils/errorHandler");
 const { generateUUIDV4 } = require("../utils/idManager");
 
 class ConsumerGoodService {
-    async findGoodInRoom (roomId, goodId) {
+
+    async deleteGoodOutOfRoom(query) {
+        let { roomId, goodId } = query;
+        const connection = await database.getConnection();
+        connection.beginTransaction();
+        try {
+            checkMissingField("roomId", roomId);
+            checkMissingField("goodId", goodId);
+            const goodInRoom = await this.findGoodInRoom(roomId, goodId);
+            if (goodInRoom.length > 0) {
+                const RETURN_QUERY = `UPDATE DoTieuDung SET SoLuong = SoLuong + ${goodInRoom[0].SoLuong} WHERE ID = '${goodId}'`;
+                console.log(RETURN_QUERY);
+                await connection.query(RETURN_QUERY);
+                const QUERY = `DELETE FROM DoTieuDung_Phong WHERE MaPhong = '${roomId}' AND MaDoTieuDung = '${goodId}'`;
+                await connection.query(QUERY);
+                await connection.commit();
+                return true;
+            } else {
+                throw createHttpError(404, "Không tìm thấy đồ tiêu dùng trong phòng");
+            }
+        } catch (error) {
+            await connection.rollback();
+            if (!error.status) throw createHttpError(500, error.message);
+            throw error;
+        }
+    }
+
+    async findGoodsInRoom(roomId) {
+        try {
+            const QUERY = `SELECT * FROM DoTieuDung_Phong WHERE MaPhong = '${roomId}'`;
+            const [result] = await database.query(QUERY);
+            return result;
+        } catch (error) {
+            if (!error.status) throw createHttpError(500, error.message);
+            throw error;
+        }
+    }
+
+    async findGoodInRoom(roomId, goodId) {
         try {
             const QUERY = `SELECT * FROM DoTieuDung_Phong WHERE MaPhong = '${roomId}' AND MaDoTieuDung = '${goodId}'`;
-            const [result] = await database.query(QUERY)
-            return result
+            const [result] = await database.query(QUERY);
+            return result;
         } catch (error) {
             if (!error.status) throw createHttpError(500, error.message);
             throw error;
         }
     }
 
-    async getGoodById (goodId)
-    {
+    async getGoodById(goodId) {
         try {
             const QUERY = `SELECT * FROM DoTieuDung WHERE ID = '${goodId}'`;
-            const [result] = await database.query(QUERY)
-            return result
+            const [result] = await database.query(QUERY);
+            return result;
         } catch (error) {
             if (!error.status) throw createHttpError(500, error.message);
             throw error;
         }
     }
 
-    async getGoodByIds (goodIds)
-    {
+    async getGoodByIds(goodIds) {
         try {
-            const QUERY = `SELECT * FROM DoTieuDung WHERE ID IN (${goodIds.map(item => `'${item}'`).join(",")})`;
-            const [result] = await database.query(QUERY)
-            return result
+            const QUERY = `SELECT * FROM DoTieuDung WHERE ID IN (${goodIds.map((item) => `'${item}'`).join(",")})`;
+            const [result] = await database.query(QUERY);
+            return result;
         } catch (error) {
             if (!error.status) throw createHttpError(500, error.message);
             throw error;
@@ -63,44 +99,37 @@ class ConsumerGoodService {
 
     async updateGoodInfo(connection, id, data) {
         // Update quantity, 2 types of price
-        console.log(data)
+        console.log(data);
         let { quantity, importPricePerUnit, salePricePerUnit } = data;
         try {
-            if(!quantity && !importPricePerUnit && !salePricePerUnit)
-            {
-                throw createHttpError(400, "No fields are specified")
+            if (!quantity && !importPricePerUnit && !salePricePerUnit) {
+                throw createHttpError(400, "No fields are specified");
             }
-            const updates = []
+            const updates = [];
             if (quantity) {
                 quantity = parseInt(quantity);
-                updates.push(`SoLuong = ${quantity}`)
+                updates.push(`SoLuong = ${quantity}`);
             }
             if (importPricePerUnit) {
                 importPricePerUnit = parseFloat(importPricePerUnit);
-                updates.push(`GiaNhapDonVi = ${importPricePerUnit}`)
+                updates.push(`GiaNhapDonVi = ${importPricePerUnit}`);
             }
             if (salePricePerUnit) {
                 salePricePerUnit = parseFloat(salePricePerUnit);
-                updates.push(`GiaBanDonVi = ${salePricePerUnit}`)
+                updates.push(`GiaBanDonVi = ${salePricePerUnit}`);
             }
-            const UPDATE_QUERY = `UPDATE DoTieuDung SET ${updates.join(", ")} WHERE ID = '${id}'`
-            let result = null
+            const UPDATE_QUERY = `UPDATE DoTieuDung SET ${updates.join(", ")} WHERE ID = '${id}'`;
+            let result = null;
             // use connection as a part of a transaction
-            if(connection)
-            {
-                const [result] = await connection.query(UPDATE_QUERY)
+            if (connection) {
+                const [result] = await connection.query(UPDATE_QUERY);
+            } else {
+                const [result] = await database.query(UPDATE_QUERY);
             }
-            else
-            {
-                const [result] = await database.query(UPDATE_QUERY)
-            }
-            return result
-
+            return result;
         } catch (error) {
-            if(error.status)
-                throw error
-            throw createHttpError(500, error.message)
-
+            if (error.status) throw error;
+            throw createHttpError(500, error.message);
         }
     }
 
