@@ -58,6 +58,15 @@ class BookingService {
         }
     }
 
+    async completeOrderByIdForCheckout(orderId)
+    {
+        try {
+            
+        } catch (error) {
+            
+        }
+    }
+
     async getOrderByIdForCheckout(orderId) {
         try {
             // get info about order and rooms

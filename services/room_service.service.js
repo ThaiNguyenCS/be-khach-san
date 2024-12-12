@@ -442,11 +442,11 @@ class RoomService {
             if (distance) distance = parseInt(distance);
             const order = await this.getRoomServiceOrder({ orderId, type });
             // Check order status first
-            if (order[0].TrangThai !== "not completed") {
+            if (order.TrangThai !== "not completed") {
                 throw createHttpError(403, "Đơn đã hủy hoặc hoàn thành không thể được cập nhật");
             }
             // Get service info
-            const service = await this.getRoomServiceInfo({ type, serviceId: order[0].MaDichVu });
+            const service = await this.getRoomServiceInfo({ type, serviceId: order.MaDichVu });
 
             switch (type) {
                 case "laundry": {
@@ -493,8 +493,8 @@ class RoomService {
                     let totalBill =
                         parseFloat(service.MucGia) *
                         differenceInHours(
-                            new Date(finishTime || order[0].ThoiGianKetThuc),
-                            new Date(startTime || order[0].ThoiGianBatDau),
+                            new Date(finishTime || order.ThoiGianKetThuc),
+                            new Date(startTime || order.ThoiGianBatDau),
                             {
                                 roundingMethod: "ceil",
                             }
@@ -502,8 +502,8 @@ class RoomService {
                     await database.query(
                         `CALL UpdateDonSuDungDichVuPhongHop(   
                         '${orderId}', 
-                        '${formatDate(new Date(startTime || order[0].ThoiGianBatDau), "yyyy-MM-dd HH:mm:ss")}',
-                        '${formatDate(new Date(finishTime || order[0].ThoiGianKetThuc), "yyyy-MM-dd HH:mm:ss")}',
+                        '${formatDate(new Date(startTime || order.ThoiGianBatDau), "yyyy-MM-dd HH:mm:ss")}',
+                        '${formatDate(new Date(finishTime || order.ThoiGianKetThuc), "yyyy-MM-dd HH:mm:ss")}',
                         ${totalBill},
                         '${status}')`
                     );
