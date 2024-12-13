@@ -320,7 +320,7 @@ class AuthService {
                 updates.push(`Ten = '${cusName}'`);
             }
             if (cusCitizenId) {
-                updates.push(`CCCD = '${cusName}'`);
+                updates.push(`CCCD = '${cusCitizenId}'`);
             }
             if (cusSex) {
                 updates.push(`GioiTinh = '${cusSex}'`);
@@ -335,8 +335,8 @@ class AuthService {
                 const UPDATE_QUERY = `UPDATE KhachHang SET ${updates.join(", ")} WHERE SoDienThoai = '${
                     user.phoneNumber
                 }'`;
-            }
-            throw createHttpError(400, "Vui lòng nhập ít nhất 1 trường cần cập nhật");
+                const [result] = await database.query(UPDATE_QUERY);
+            } else throw createHttpError(400, "Vui lòng nhập ít nhất 1 trường cần cập nhật");
         } catch (error) {
             if (error.status) throw error;
             throw createHttpError(500, error.message);
