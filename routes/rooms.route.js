@@ -3,7 +3,7 @@ const { database } = require("../database");
 const roomsService = require("../services/rooms.service");
 const { validateDiscount } = require("../middlewares/validateDiscount.middleware.");
 const { getDateArray } = require("../utils/date");
-const { validateRoom } = require("../middlewares/validateRoom.middleware");
+const { validateRoom, verifyGoodsInRoom } = require("../middlewares/validateRoom.middleware");
 const consumer_goodsService = require("../services/consumer_goods.service");
 const router = express.Router();
 
@@ -27,7 +27,7 @@ router.delete("/:roomId/goods/:goodId", async (req, res) => {
 });
 
 // Tạo bản báo cáo phòng
-router.post("/:roomId/:createdTime/report", async (req, res) => {
+router.post("/:roomId/:createdTime/report", verifyGoodsInRoom, async (req, res) => {
     try {
         await roomsService.generateReportForRoomRecord(req.params.roomId, req.params.createdTime, req.body);
         res.send({ status: "success", message: "Tạo báo cáo thành công!" });

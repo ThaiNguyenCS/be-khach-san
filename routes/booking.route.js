@@ -74,7 +74,7 @@ router.post("/:orderId/checkout", validateOrder, async (req, res) => {
         res.send({ status: "success", message: `Tạo hóa đơn cho đơn đặt phòng ${req.params.orderId} thành công!` });
     } catch (error) {
         console.log(error.message);
-        res.status(500).send({ status: "failed", error: error });
+        res.status(error.status).send({ status: "failed", message: error.message });
     }
 });
 
