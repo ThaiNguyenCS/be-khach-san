@@ -7,7 +7,7 @@ const room_serviceService = require("../services/room_service.service");
 const { verifyRoomsThatAvailable } = require("../middlewares/validateRoom.middleware");
 const { validateOrder } = require("../middlewares/validateOrder.middleware");
 const receiptService = require("../services/receipt.service");
-const { authenticateBearerToken } = require("../middlewares/validateOTP");
+const { authenticateBearerToken } = require("../middlewares/authentication.middleware");
 const router = express.Router();
 
 // Lấy tất cả đơn đặt phòng cho khách

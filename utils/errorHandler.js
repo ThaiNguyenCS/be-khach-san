@@ -6,5 +6,9 @@ function checkMissingField(fieldName, value) {
     }
 }
 
+function checkEmail(email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+}
 
-module.exports = {checkMissingField}
+module.exports = { checkMissingField, checkEmail };

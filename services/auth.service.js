@@ -1,7 +1,7 @@
 const createHttpError = require("http-errors");
 const { database } = require("../database");
 const nodemailer = require("nodemailer");
-const { checkMissingField } = require("../utils/errorHandler");
+const { checkMissingField, checkEmail } = require("../utils/errorHandler");
 const { generateUUIDV4 } = require("../utils/idManager");
 const { format, compareAsc } = require("date-fns");
 require("dotenv").config();
@@ -37,13 +37,13 @@ class AuthService {
         if (!phoneNumber || !otp) {
             throw createHttpError(403, "Số điện thoại và OTP không được để trống");
         }
-        const connection = await database.getConnection()
-        await connection.beginTransaction()
+        const connection = await database.getConnection();
+        await connection.beginTransaction();
         try {
             // Lấy OTP từ database
             const [otpRecord] = await database.query(`SELECT * FROM OTP WHERE SoDienThoai = '${phoneNumber}'`);
             console.log(otpRecord);
-            
+
             if (!otpRecord.length) {
                 throw createHttpError(403, "OTP không tồn tại hoặc đã hết hạn");
             }
@@ -62,22 +62,23 @@ class AuthService {
 
             // Xác thực thành công, xóa OTP
             await connection.query(`DELETE FROM OTP WHERE SoDienThoai = ?`, [phoneNumber]);
-            const [user] = await connection.query(`SELECT * FROM KhachHang WHERE SoDienThoai = '${phoneNumber}' LIMIT 1`);
+            const [user] = await connection.query(
+                `SELECT * FROM KhachHang WHERE SoDienThoai = '${phoneNumber}' LIMIT 1`
+            );
 
             const token = generateToken(user[0]);
 
             if (!token) {
                 throw createHttpError(500, "Lỗi tạo token");
             }
-            await connection.commit()
+            await connection.commit();
             return { token };
         } catch (error) {
-            await connection.rollback()
+            await connection.rollback();
             if (error.status) throw error;
             throw createHttpError(500, error.message);
-        }
-        finally{
-            await connection.release()
+        } finally {
+            connection.release();
         }
     };
 
@@ -269,6 +270,76 @@ class AuthService {
             throw createHttpError(500, error.message);
         } finally {
             connection.release();
+        }
+    }
+
+    async register(data) {
+        let { cusName, cusPhoneNumber, cusCitizenId, cusSex, cusDOB, cusEmail } = data;
+        try {
+            checkMissingField("cusName", cusName);
+            checkMissingField("cusPhoneNumber", cusPhoneNumber);
+            checkMissingField("cusCitizenId", cusCitizenId);
+            checkMissingField("cusSex", cusSex);
+            checkMissingField("cusDOB", cusDOB);
+            checkMissingField("cusEmail", cusEmail);
+            if (!checkEmail(cusEmail)) throw createHttpError(400, "Định dạng email không hợp lệ");
+            const QUERY = `INSERT INTO KhachHang (ID, Ten, CCCD, SoDienThoai, NgaySinh, GioiTinh, Email) VALUES 
+            ('${generateUUIDV4()}', '${cusName}', '${cusCitizenId}', '${cusPhoneNumber}', '${format(
+                new Date(cusDOB),
+                "yyyy-MM-dd"
+            )}', '${cusSex}',  '${cusEmail}')`;
+            console.log(QUERY);
+
+            const [result] = await database.query(QUERY);
+            return {};
+        } catch (error) {
+            if (error.status) throw error;
+            throw createHttpError(500, error.message);
+        }
+    }
+
+    async getProfile(user) {
+        try {
+            const QUERY = `SELECT * FROM KhachHang WHERE SoDienThoai = '${user.phoneNumber}'`;
+            const [userInfo] = await database.query(QUERY);
+            return userInfo[0];
+        } catch (error) {
+            if (error.status) throw error;
+            throw createHttpError(500, error.message);
+        }
+    }
+
+    async updateProfile(data) {
+        let { user, cusName, cusCitizenId, cusSex, cusDOB, cusEmail } = data;
+        console.log("data updateProfile", data);
+
+        try {
+            checkMissingField("user", user);
+            const updates = [];
+            if (cusName) {
+                updates.push(`Ten = '${cusName}'`);
+            }
+            if (cusCitizenId) {
+                updates.push(`CCCD = '${cusName}'`);
+            }
+            if (cusSex) {
+                updates.push(`GioiTinh = '${cusSex}'`);
+            }
+            if (cusDOB) {
+                updates.push(`NgaySinh = '${format(new Date(cusDOB), "yyyy-MM-dd")}'`);
+            }
+            if (cusEmail) {
+                updates.push(`Email = '${cusEmail}'`);
+            }
+            if (updates.length > 0) {
+                const UPDATE_QUERY = `UPDATE KhachHang SET ${updates.join(", ")} WHERE SoDienThoai = '${
+                    user.phoneNumber
+                }'`;
+            }
+            throw createHttpError(400, "Vui lòng nhập ít nhất 1 trường cần cập nhật");
+        } catch (error) {
+            if (error.status) throw error;
+            throw createHttpError(500, error.message);
         }
     }
 }
