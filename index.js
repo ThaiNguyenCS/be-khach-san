@@ -13,6 +13,7 @@ const roomServiceRouter = require("./routes/room_service.route");
 const discountRouter = require("./routes/discount.route");
 var cors = require("cors");
 const morgan = require("morgan");
+const authRouter = require("./routes/authenticate.route");
 const ORIGIN_LIST = ["http://localhost:3000"]
 const CORS_OPTION = {
     origin: ["http://localhost:3000"],
@@ -34,6 +35,7 @@ app.use("/", faciliTyRouter);
 app.use("/branches", branchRouter);
 app.use("/room-service", roomServiceRouter);
 app.use("/discounts", discountRouter);
+app.use("/auth", authRouter);
 
 app.listen(process.env.PORT, () => {
     console.log(`Server's listening at port ${process.env.PORT}`);

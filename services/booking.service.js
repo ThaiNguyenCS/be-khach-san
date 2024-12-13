@@ -11,6 +11,7 @@ class BookingService {
         try {
             limit = parseInt(limit);
             page = parseInt(page);
+            
             let condition = "";
             let customer = null;
             if (cusPhoneNumber) {
