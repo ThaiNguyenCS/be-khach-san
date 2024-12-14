@@ -16,16 +16,65 @@
 //     }
 // });
 
+// function isValidEmail(email) {
+//     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+//     return emailRegex.test(email);
+// }
 
-function isValidEmail(email) {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+// console.log(isValidEmail("thainguyen@gmail.com"));
+// console.log(isValidEmail("thainguyen@hcmut.edu.vn"));
+// console.log(isValidEmail("thainguyen@@gmail.com"));
+// console.log(isValidEmail("thainguyen@gmail.com.vb.cb"));
+// console.log(isValidEmail("thainguyen@gmail.com"));
+
+const csv = require("csv-parser");
+const fs = require("fs");
+
+const numberIdxes = { 2: "float" };
+
+function generateInsertSQL(csvFilePath, tableName) {
+    let sql = `INSERT INTO ${tableName} (`;
+    let columns = [];
+    let values = [];
+
+    fs.createReadStream(csvFilePath)
+        .pipe(csv())
+        .on("data", (row) => {
+            console.log(row);
+
+            const rowValues = Object.values(row).map((value, idx) => {
+                if (value === "NULL") return `NULL`;
+                if (numberIdxes.idx) {
+                    if (numberIdxes.idx === "float") {
+                        return `${parseFloat(value)}`;
+                    } else {
+                        return `${parseInt(value)}`;
+                    }
+                }
+                return `'${value}'`;
+            });
+            values.push(`(${rowValues.join(", ")})`);
+
+            if (!columns.length) {
+                columns = Object.keys(row);
+                sql += columns.join(", ") + ") VALUES ";
+            }
+        })
+        .on("end", () => {
+            sql += values.join(", ");
+            fs.writeFileSync("insert_sql.txt", sql);
+            console.log("SQL statements generated successfully!");
+        });
 }
 
-console.log(isValidEmail("thainguyen@gmail.com"));
-console.log(isValidEmail("thainguyen@hcmut.edu.vn"));
-console.log(isValidEmail("thainguyen@@gmail.com"));
-console.log(isValidEmail("thainguyen@gmail.com.vb.cb"));
-console.log(isValidEmail("thainguyen@gmail.com"));
+// Example usage:
+// let csvFilePath = "C://Users//THAI//OneDrive//Desktop//Database - Phòng.csv";
+let csvFilePath = "C://Users//THAI//OneDrive//Desktop//_Khachsan Database - CoSoVatChatPhong.csv";
+// let csvFilePath = "C://Users//THAI//OneDrive//Desktop//Database - Phòng.csv";
+// let csvFilePath = "C://Users//THAI//OneDrive//Desktop//Database - Phòng.csv";
 
+console.log(csvFilePath);
 
+const tableName = "CoSoVatChatPhong";
+
+generateInsertSQL(csvFilePath, tableName);
