@@ -4,7 +4,6 @@ const { checkMissingField } = require("../utils/errorHandler");
 const { generateUUIDV4 } = require("../utils/idManager");
 
 class ConsumerGoodService {
-
     async deleteGoodOutOfRoom(query) {
         let { roomId, goodId } = query;
         const connection = await database.getConnection();
@@ -33,7 +32,9 @@ class ConsumerGoodService {
 
     async findGoodsInRoom(roomId) {
         try {
-            const QUERY = `SELECT * FROM DoTieuDung_Phong DTD_P JOIN  DoTieuDung ON WHERE MaPhong = '${roomId}'`;
+            const QUERY = `SELECT DTD_P.MaDoTieuDung, DTD_P.SoLuong, DTD_P.MaPhong, DTD.TenSanPham, DTD.GiaNhapDonVi, DTD.GiaBanDonVi FROM DoTieuDung_Phong DTD_P JOIN DoTieuDung DTD ON DTD.ID = DTD_P.MaDoTieuDung WHERE MaPhong = '${roomId}'`;
+            console.log(QUERY);
+            
             const [result] = await database.query(QUERY);
             return result;
         } catch (error) {
