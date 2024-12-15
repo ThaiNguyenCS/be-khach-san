@@ -33,7 +33,7 @@ class ConsumerGoodService {
 
     async findGoodsInRoom(roomId) {
         try {
-            const QUERY = `SELECT * FROM DoTieuDung_Phong WHERE MaPhong = '${roomId}'`;
+            const QUERY = `SELECT * FROM DoTieuDung_Phong DTD_P JOIN  DoTieuDung ON WHERE MaPhong = '${roomId}'`;
             const [result] = await database.query(QUERY);
             return result;
         } catch (error) {

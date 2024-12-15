@@ -121,16 +121,17 @@ class RoomService {
 
             switch (type) {
                 case "laundry": {
-                    const [result] = await database.query(
-                        `CALL UpdateDichVuGiatUi ('${serviceId}', ${
-                            washingOption ? `"${washingOption}"` : "NULL"
-                        }, ${price}, '${description}')`
-                    );
                     console.log(
                         `CALL UpdateDichVuGiatUi ('${serviceId}', ${handleParameterIfNull(
                             washingOption
                         )}, ${handleParameterIfNull(price)}, ${handleParameterIfNull(description)})`
                     );
+                    const [result] = await database.query(
+                        `CALL UpdateDichVuGiatUi ('${serviceId}', ${handleParameterIfNull(
+                            washingOption
+                        )}, ${handleParameterIfNull(price)}, ${handleParameterIfNull(description)})`
+                    );
+              
 
                     if (result.affectedRows === 0) {
                         throw createHttpError(404, "Không tìm thấy dịch vụ");
@@ -175,6 +176,8 @@ class RoomService {
                 }
             }
         } catch (error) {
+            console.log(error);
+            
             if (error.status) throw error;
             throw createHttpError(500, error.message);
         }

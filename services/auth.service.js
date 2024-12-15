@@ -206,6 +206,7 @@ class AuthService {
         try {
             let info = await transporter.sendMail(mailOptions);
             console.log("Email sent: " + info.response);
+            return { email: email };
         } catch (error) {
             console.error("Error sending email: ", error);
             throw error;
@@ -260,6 +261,7 @@ class AuthService {
                 await this.sendMail(sendingEmail, "Đăng nhập ứng dụng", otp);
                 await connection.commit();
                 // res.status(200).send({ status: "success", message: "OTP sent successfully" });
+                return { message: `Mã OTP đã được gửi đến địa chỉ ${sendingEmail}` };
             } else {
                 throw createHttpError(404, `Không tồn tại khách hàng với số điện thoại ${phoneNumber}`);
             }

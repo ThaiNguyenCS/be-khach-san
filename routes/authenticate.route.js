@@ -46,8 +46,8 @@ router.post("/user/login", async (req, res) => {
 
 router.post("/user", async (req, res) => {
     try {
-        await authService.sendOTP(req.body);
-        res.send({ status: "success", message: "OTP đã được gửi về email!" });
+        const result = await authService.sendOTP(req.body);
+        res.send({ status: "success", ...result });
     } catch (error) {
         console.log(error);
 
