@@ -1,4 +1,14 @@
-const { addDays, compareAsc, format } = require("date-fns");
+const {
+    addDays,
+    compareAsc,
+    format,
+    isEqual,
+    isBefore,
+    addYears,
+    startOfMonth,
+    startOfYear,
+    addMonths,
+} = require("date-fns");
 
 function getDateArray(startDate, endDate) {
     let start = new Date(startDate);
@@ -11,6 +21,34 @@ function getDateArray(startDate, endDate) {
     return arr;
 }
 
+function getDateArrayV2(startDate, endDate, option) {
+    if (option === "date") {
+        return getDateArray(startDate, endDate);
+    }
+    if (option === "month") {
+        let start = startOfMonth(new Date(startDate));
+        let end = startOfMonth(new Date(endDate));
+        const arr = [];
+        while (isBefore(start, end) || isEqual(start, end)) {
+            arr.push(format(start, "yyyy-MM"));
+            start = addMonths(start, 1);
+        }
+        console.log(arr);
+
+        return arr;
+    }
+    if (option === "year") {
+        let start = startOfYear(new Date(startDate));
+        let end = startOfYear(new Date(endDate));
+        const arr = [];
+        while (isBefore(start, end) || isEqual(start, end)) {
+            arr.push(format(start, "yyyy"));
+            start = addYears(start, 1);
+        }
+        return arr;
+    }
+}
+
 function formatDateTime(date) {
     if (date) {
         const fDate = new Date(date);
@@ -18,4 +56,4 @@ function formatDateTime(date) {
     }
 }
 
-module.exports = {getDateArray, formatDateTime};
+module.exports = { getDateArray, formatDateTime, getDateArrayV2 };
