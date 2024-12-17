@@ -4,10 +4,12 @@ const { generateUUIDV4 } = require("../utils/idManager");
 const amenitiesService = require("../services/amenities.service");
 const router = express.Router();
 
-//! Thống kê số lượng tiện nghi theo từng phòng
+//! Thống kê số lượng tiện nghi theo từng phòng (Theo chi nhánh)
 router.get("/amenities-statistics", async (req, res) => {
     try {
-        const statistics  = await amenitiesService.getAmenitiesStatistics();
+        const { MaChiNhanh } = req.query;
+        console.log(MaChiNhanh)
+        const statistics  = await amenitiesService.getAmenitiesStatisticsbyBranch(MaChiNhanh);
         res.send({
             status: "success",
             message: "Thống kê số lượng phòng theo từng tiện nghi",
@@ -18,6 +20,9 @@ router.get("/amenities-statistics", async (req, res) => {
         res.status(500).send({ status: "failed", error: error.message });
     }
 });
+
+
+
 
 
 router.post("/rooms", async (req, res) => {

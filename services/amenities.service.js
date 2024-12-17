@@ -139,6 +139,47 @@ class AmenityService {
             throw createHttpError(500, error.message);
         }
     }
+    async getAmenitiesStatisticsbyBranch(maChiNhanh = null) {
+        try {
+            // SQL query để thống kê số lượng phòng có mỗi loại tiện nghi
+            let QUERY = `
+                SELECT 
+                    TienNghiPhong.Ten AS TienNghi,
+                    COUNT(DISTINCT TienNghiPhong_Phong.MaPhong) AS SoLuongPhong
+                FROM 
+                    TienNghiPhong
+                LEFT JOIN 
+                    TienNghiPhong_Phong 
+                ON 
+                    TienNghiPhong.ID = TienNghiPhong_Phong.MaTienNghi
+                LEFT JOIN
+                    Phong
+                ON
+                    TienNghiPhong_Phong.MaPhong = Phong.MaPhong
+            `;
+            
+            // Nếu có MaChiNhanh thì thêm điều kiện WHERE để lọc
+            if (maChiNhanh) {
+                QUERY += ` WHERE Phong.MaChiNhanh = ? `;
+            }
+    
+            QUERY += 'GROUP BY TienNghiPhong.Ten;'; // Đảm bảo thống kê theo từng tiện nghi
+    
+            // Thực hiện truy vấn
+            const [result] = await database.query(QUERY, maChiNhanh ? [maChiNhanh] : []);
+    
+            // Nếu không có kết quả, ném lỗi
+            if (result.length === 0) {
+                throw createHttpError(404, 'Không tìm thấy tiện nghi nào trong các phòng');
+            }
+    
+            return result; // Trả về kết quả
+        } catch (error) {
+            // Kiểm tra lỗi và ném ra lỗi phù hợp
+            if (error.status) throw error;
+            throw createHttpError(500, error.message);
+        }
+    }
 }
 
 module.exports = new AmenityService();
