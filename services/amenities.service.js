@@ -111,6 +111,34 @@ class AmenityService {
             throw createHttpError(500, error.message);
         }
     }
+    async getAmenitiesStatistics() {
+        try {
+            const QUERY = `
+                SELECT 
+                    TienNghiPhong.Ten AS TienNghi,
+                    COUNT(DISTINCT TienNghiPhong_Phong.MaPhong) AS SoLuongPhong
+                FROM 
+                    TienNghiPhong
+                LEFT JOIN 
+                    TienNghiPhong_Phong 
+                ON 
+                    TienNghiPhong.ID = TienNghiPhong_Phong.MaTienNghi
+                GROUP BY 
+                    TienNghiPhong.Ten;
+            `;
+            
+            const [result] = await database.query(QUERY);
+    
+            if (result.length === 0) {
+                throw createHttpError(404, 'Không tìm thấy tiện nghi nào trong các phòng');
+            }
+    
+            return result;
+        } catch (error) {
+            if (error.status) throw error;
+            throw createHttpError(500, error.message);
+        }
+    }
 }
 
 module.exports = new AmenityService();
