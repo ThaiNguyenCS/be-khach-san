@@ -153,6 +153,30 @@ router.post("/add/:roomId", async (req, res) => {
     }
 });
 
+//! Thêm tiện nghi vào nhiều phòng
+router.post("/add/multiple", async (req, res) => {
+    const { maTienNghi, maPhongList } = req.body;
+
+    if (!maTienNghi || !maPhongList || maPhongList.length === 0) {
+        return res.status(400).send({ status: 'failed', message: 'Thiếu thông tin tiện nghi hoặc phòng' });
+    }
+
+    try {
+        const result = await amenitiesService.addAmenityToRooms(maTienNghi, maPhongList);
+
+        res.send({
+            status: 'success',
+            message: 'Tiện nghi đã được thêm vào các phòng',
+            data: result,
+        });
+    } catch (error) {
+        res.status(error.status || 500).send({
+            status: 'failed',
+            error: error.message,
+        });
+    }
+} )
+
 //! Xóa tiện nghi khỏi phòng
 router.delete("/delete/:roomId/:amenityId", async (req, res) => {
     const { roomId, amenityId } = req.params;

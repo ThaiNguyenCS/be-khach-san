@@ -176,6 +176,27 @@ class AmenityService {
             throw createHttpError(500, error.message);
         }
     }
+    async addAmenityToRooms(maTienNghi, maPhongList) {
+        try {
+             // Tạo danh sách các cặp (MaPhong, MaTienNghi) để insert vào bảng TienNghiPhong_Phong
+            const values = maPhongList.map((maPhong) => [maPhong, maTienNghi]);
+
+            const QUERY = `
+                INSERT INTO TienNghiPhong_Phong (MaPhong, MaTienNghi)
+                VALUES ?
+            `;
+            const [result] = await database.query(QUERY, [values]);
+    
+            if (result.affectedRows === 0) {
+                throw createHttpError(500, 'Không thể thêm tiện nghi vào phòng');
+            }
+    
+            return result;
+        } catch (error) {p
+            if (error.status) throw error;
+            throw createHttpError(500, error.message);
+        }
+    }
 }
 
 module.exports = new AmenityService();
