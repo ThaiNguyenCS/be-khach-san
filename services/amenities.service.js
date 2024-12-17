@@ -158,24 +158,20 @@ class AmenityService {
                     TienNghiPhong_Phong.MaPhong = Phong.MaPhong
             `;
             
-            // Nếu có MaChiNhanh thì thêm điều kiện WHERE để lọc
             if (maChiNhanh) {
                 QUERY += ` WHERE Phong.MaChiNhanh = ? `;
             }
     
-            QUERY += 'GROUP BY TienNghiPhong.Ten;'; // Đảm bảo thống kê theo từng tiện nghi
+            QUERY += 'GROUP BY TienNghiPhong.Ten;';
     
-            // Thực hiện truy vấn
             const [result] = await database.query(QUERY, maChiNhanh ? [maChiNhanh] : []);
     
-            // Nếu không có kết quả, ném lỗi
             if (result.length === 0) {
                 throw createHttpError(404, 'Không tìm thấy tiện nghi nào trong các phòng');
             }
     
-            return result; // Trả về kết quả
+            return result;
         } catch (error) {
-            // Kiểm tra lỗi và ném ra lỗi phù hợp
             if (error.status) throw error;
             throw createHttpError(500, error.message);
         }
