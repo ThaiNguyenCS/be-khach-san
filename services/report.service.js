@@ -5,8 +5,53 @@ const { getDateArray, getDateArrayV2 } = require("../utils/date");
 require("dotenv").config();
 class ReportService {
     async getEmployeeSalaries(query) {
-        let { period, time } = query;
+        let { period = "monthly", startTime = new Date(Date.now()), endTime = new Date(Date.now()) } = query;
         try {
+            // cannot get salary daily
+            if (period === "daily") period = "monthly";
+
+            startTime = new Date(startTime);
+            endTime = new Date(endTime);
+            // invalid query
+            if (compareAsc(endTime, startTime) === -1) {
+                throw createHttpError(400, "endTime is before startTime");
+            }
+            let dateArr = [];
+            const conditions = [];
+            const selects = [];
+            if (period === "monthly") {
+                dateArr = getDateArrayV2(startTime, endTime, "month");
+                console.log(dateArr);
+
+                conditions.push(
+                    `ThangCap IN  (${dateArr
+                        .map((item) => `MONTH('${format(new Date(item), "yyyy-MM-dd")}')`)
+                        .join(", ")})`
+                );
+                conditions.push(
+                    `NamCap IN  (${dateArr
+                        .map((item) => `YEAR('${format(new Date(item), "yyyy-MM-dd")}')`)
+                        .join(", ")})`
+                );
+                selects.push(["ThangCap", "AS issuedMonth"]);
+                selects.push([`NamCap`, "AS issuedYear"]);
+            }
+            if (period === "yearly") {
+                dateArr = getDateArrayV2(startTime, endTime, "year");
+                conditions.push(
+                    `NamCap IN  (${dateArr
+                        .map((item) => `YEAR('${format(new Date(item), "yyyy-MM-dd")}')`)
+                        .join(", ")})`
+                );
+                selects.push([`NamCap`, "AS issuedYear"]);
+            }
+            const QUERY = `SELECT SUM(MucLuong) as salary, ${selects
+                .map((item) => item[0] + " " + item[1])
+                .join(", ")} FROM LichSuCapLuong ${
+                conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : ""
+            } GROUP BY ${selects.map((item) => item[0]).join(", ")}`;
+            const [result] = await database.query(QUERY);
+            return { salary: { data: result, startTime: dateArr[0], endTime: dateArr.at(-1), period } };
         } catch (error) {
             if (error.status) throw error;
             throw createHttpError(500, error.message);

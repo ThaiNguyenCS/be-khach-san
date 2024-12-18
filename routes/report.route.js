@@ -7,7 +7,8 @@ router.get("/all", async (req, res) => {
         const result = await reportService.getIntakeFromOrderedRooms(req.query);
         const result2 = await reportService.getIntakeFromServices(req.query);
         const result3 = await reportService.getMaintenanceCost(req.query);
-        res.send({ status: "success", ...result, ...result2, ...result3 });
+        const salary = await reportService.getEmployeeSalaries(req.query);
+        res.send({ status: "success", ...result, ...result2, ...result3, ...salary });
     } catch (error) {
         res.status(error.status).send({ status: "failed", message: error.message });
     }
