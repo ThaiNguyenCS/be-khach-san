@@ -1,11 +1,12 @@
 const { formatDate } = require("date-fns");
 const createHttpError = require("http-errors");
-const { checkMissingField } = require("../utils/errorHandler");
+const { checkMissingField, checkMonthValue } = require("../utils/errorHandler");
 const { generateUUIDV4 } = require("../utils/idManager");
 const { database } = require("../database");
 const { pushUpdate } = require("../utils/dynamicUpdate");
 
 class EmployeeService {
+    // tạo bảng lương
     async generateIssuedSalary(data) {
         let { month, year } = data;
         try {
@@ -24,6 +25,7 @@ class EmployeeService {
         }
     }
 
+    // update lương trong bảng cấp lương
     async updateIssuedSalary(data) {
         let { empId, salary, status, month, year } = data;
         try {
@@ -47,7 +49,23 @@ class EmployeeService {
             return { data: result };
         } catch (error) {
             console.log(error);
+            if (error.status) throw error;
+            throw createHttpError(500, error.message);
+        }
+    }
 
+    // xem bảng lương tháng
+    async getIssuedSalary(query) {
+        let { month = new Date(Date.now()).getMonth() + 1, year = new Date(Date.now()).getFullYear() } = query;
+        try {
+            month = parseInt(month);
+            checkMonthValue(month);
+            year = parseInt(year);
+            const QUERY = `SELECT LSCL.*, NV.HoTen, NV.SoTaiKhoan, NV.VaiTro FROM LichSuCapLuong LSCL JOIN NhanVien NV ON LSCL.IDNhanVien = NV.ID WHERE ThangCap = ${month} AND NamCap = ${year}`;
+            console.log(QUERY);
+            const [result] = await database.query(QUERY);
+            return { data: result };
+        } catch (error) {
             if (error.status) throw error;
             throw createHttpError(500, error.message);
         }

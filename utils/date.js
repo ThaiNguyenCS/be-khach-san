@@ -28,6 +28,8 @@ function getDateArrayV2(startDate, endDate, option) {
     if (option === "month") {
         let start = startOfMonth(new Date(startDate));
         let end = startOfMonth(new Date(endDate));
+        console.log(start, end);
+        
         const arr = [];
         while (isBefore(start, end) || isEqual(start, end)) {
             arr.push(format(start, "yyyy-MM"));

@@ -4,6 +4,71 @@ const { database } = require("../database");
 const { getDateArray, getDateArrayV2 } = require("../utils/date");
 require("dotenv").config();
 class ReportService {
+    async getOrderStats(query) {
+        let { period = "daily", startTime = new Date(Date.now()), endTime = new Date(Date.now()) } = query;
+        try {
+            startTime = new Date(startTime);
+            endTime = new Date(endTime);
+            // invalid query
+            if (compareAsc(endTime, startTime) === -1) {
+                throw createHttpError(400, "endTime is before startTime");
+            }
+            console.log(startTime, endTime);
+            let dateArr = [];
+            console.log("dateArr", dateArr);
+
+            const conditions = [];
+            const selects = [];
+            if (period === "daily") {
+                dateArr = getDateArrayV2(startTime, endTime, "date");
+                conditions.push(
+                    `DATE(ThoiGianDat) IN (${dateArr
+                        .map((item) => `'${format(new Date(item), "yyyy-MM-dd")}'`)
+                        .join(", ")})`
+                );
+                selects.push([`DATE(ThoiGianDat)`, "AS date"]);
+                // selects.push(["MaDon", "as orderId"]);
+            }
+            if (period === "monthly") {
+                dateArr = getDateArrayV2(startTime, endTime, "month");
+                console.log(dateArr);
+
+                conditions.push(
+                    `MONTH(ThoiGianDat) IN  (${dateArr
+                        .map((item) => `MONTH('${format(new Date(item), "yyyy-MM-dd")}')`)
+                        .join(", ")})`
+                );
+                conditions.push(
+                    `YEAR(ThoiGianDat) IN  (${dateArr
+                        .map((item) => `YEAR('${format(new Date(item), "yyyy-MM-dd")}')`)
+                        .join(", ")})`
+                );
+                selects.push(["MONTH(ThoiGianDat)", "AS month"]);
+                selects.push([`YEAR(ThoiGianDat)`, "AS year"]);
+            }
+            if (period === "yearly") {
+                dateArr = getDateArrayV2(startTime, endTime, "year");
+                conditions.push(
+                    `YEAR(ThoiGianDat) IN  (${dateArr
+                        .map((item) => `YEAR('${format(new Date(item), "yyyy-MM-dd")}')`)
+                        .join(", ")})`
+                );
+                selects.push([`YEAR(ThoiGianDat)`, "AS year"]);
+            }
+            const PRICE_QUERY = `SELECT SUM(GiaTien) as totalPrice, COUNT(*) as orderNum, ${selects
+                .map((item) => item[0] + " " + item[1])
+                .join(", ")} FROM DonDatPhong DDP JOIN BanGhiPhong BGP ON DDP.MaDon = BGP.MaDatPhong ${
+                conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : ""
+            } GROUP BY ${selects.map((item) => item[0]).join(", ")}`;
+            console.log(PRICE_QUERY);
+            const [result] = await database.query(PRICE_QUERY);
+            return { orders: { data: result, period, startTime: dateArr[0], endTime: dateArr.at(-1) } };
+        } catch (error) {
+            if (error.status) throw error;
+            throw createHttpError(500, error.message);
+        }
+    }
+
     async getEmployeeSalaries(query) {
         let { period = "monthly", startTime = new Date(Date.now()), endTime = new Date(Date.now()) } = query;
         try {

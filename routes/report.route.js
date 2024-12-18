@@ -2,6 +2,15 @@ var express = require("express");
 const reportService = require("../services/report.service");
 const router = express.Router();
 
+router.get("/orders/stat", async (req, res) => {
+    try {
+        const result = await reportService.getOrderStats(req.query);
+        res.send({ status: "success", ...result });
+    } catch (error) {
+        res.status(error.status).send({ status: "failed", message: error.message });
+    }
+});
+
 router.get("/all", async (req, res) => {
     try {
         const result = await reportService.getIntakeFromOrderedRooms(req.query);

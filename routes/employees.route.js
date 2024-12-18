@@ -11,6 +11,18 @@ router.get("/all", async (req, res) => {
     }
 });
 
+router.get("/all/salary", async (req, res) => {
+    try {
+        const result = await employeesService.getIssuedSalary(req.query);
+        res.send({
+            status: "success",
+            ...result,
+        });
+    } catch (error) {
+        res.status(error.status).send({ status: "failed", message: error.message });
+    }
+});
+
 router.post("/all/salary", async (req, res) => {
     try {
         const result = await employeesService.generateIssuedSalary(req.body);
@@ -25,10 +37,10 @@ router.post("/all/salary", async (req, res) => {
 
 router.patch("/:empId/salary", async (req, res) => {
     try {
-        const result = await employeesService.generateIssuedSalary(req.body);
+        const result = await employeesService.updateIssuedSalary({ empId: req.params.empId, ...req.body });
         res.send({
             status: "success",
-            message: `Sửa bảng lương cho nhân viên thành công`,
+            message: `Cập nhật thông tin bảng lương cho nhân viên ${req.params.empId} thành công`,
         });
     } catch (error) {
         res.status(error.status).send({ status: "failed", message: error.message });
