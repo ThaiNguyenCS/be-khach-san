@@ -111,6 +111,92 @@ class AmenityService {
             throw createHttpError(500, error.message);
         }
     }
+    async getAmenitiesStatistics() {
+        try {
+            const QUERY = `
+                SELECT 
+                    TienNghiPhong.Ten AS TienNghi,
+                    COUNT(DISTINCT TienNghiPhong_Phong.MaPhong) AS SoLuongPhong
+                FROM 
+                    TienNghiPhong
+                LEFT JOIN 
+                    TienNghiPhong_Phong 
+                ON 
+                    TienNghiPhong.ID = TienNghiPhong_Phong.MaTienNghi
+                GROUP BY 
+                    TienNghiPhong.Ten;
+            `;
+            
+            const [result] = await database.query(QUERY);
+    
+            if (result.length === 0) {
+                throw createHttpError(404, 'Không tìm thấy tiện nghi nào trong các phòng');
+            }
+    
+            return result;
+        } catch (error) {
+            if (error.status) throw error;
+            throw createHttpError(500, error.message);
+        }
+    }
+    async getAmenitiesStatisticsbyBranch(maChiNhanh = null) {
+        try {
+            // SQL query để thống kê số lượng phòng có mỗi loại tiện nghi
+            let QUERY = `
+                SELECT 
+                    TienNghiPhong.Ten AS TienNghi,
+                    COUNT(DISTINCT TienNghiPhong_Phong.MaPhong) AS SoLuongPhong
+                FROM 
+                    TienNghiPhong
+                LEFT JOIN 
+                    TienNghiPhong_Phong 
+                ON 
+                    TienNghiPhong.ID = TienNghiPhong_Phong.MaTienNghi
+                LEFT JOIN
+                    Phong
+                ON
+                    TienNghiPhong_Phong.MaPhong = Phong.MaPhong
+            `;
+            
+            if (maChiNhanh) {
+                QUERY += ` WHERE Phong.MaChiNhanh = ? `;
+            }
+    
+            QUERY += 'GROUP BY TienNghiPhong.Ten;';
+    
+            const [result] = await database.query(QUERY, maChiNhanh ? [maChiNhanh] : []);
+    
+            if (result.length === 0) {
+                throw createHttpError(404, 'Không tìm thấy tiện nghi nào trong các phòng');
+            }
+    
+            return result;
+        } catch (error) {
+            if (error.status) throw error;
+            throw createHttpError(500, error.message);
+        }
+    }
+    async addAmenityToRooms(maTienNghi, maPhongList) {
+        try {
+             // Tạo danh sách các cặp (MaPhong, MaTienNghi) để insert vào bảng TienNghiPhong_Phong
+            const values = maPhongList.map((maPhong) => [maPhong, maTienNghi]);
+
+            const QUERY = `
+                INSERT INTO TienNghiPhong_Phong (MaPhong, MaTienNghi)
+                VALUES ?
+            `;
+            const [result] = await database.query(QUERY, [values]);
+    
+            if (result.affectedRows === 0) {
+                throw createHttpError(500, 'Không thể thêm tiện nghi vào phòng');
+            }
+    
+            return result;
+        } catch (error) {p
+            if (error.status) throw error;
+            throw createHttpError(500, error.message);
+        }
+    }
 }
 
 module.exports = new AmenityService();
