@@ -11,4 +11,7 @@ function checkEmail(email) {
     return emailRegex.test(email);
 }
 
-module.exports = { checkMissingField, checkEmail };
+function checkMonthValue(month) {
+    if (month < 1 || month > 12) throw createHttpError(400, `${month} is not a valid month`);
+}
+module.exports = { checkMissingField, checkEmail, checkMonthValue };

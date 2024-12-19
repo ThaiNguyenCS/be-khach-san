@@ -2,14 +2,15 @@ var express = require("express");
 const { database } = require("../database");
 const { generateUUIDV4 } = require("../utils/idManager");
 const amenitiesService = require("../services/amenities.service");
+const createHttpError = require("http-errors");
 const router = express.Router();
 
 //! Thống kê số lượng tiện nghi theo từng phòng (Theo chi nhánh)
-router.get("/amenities-statistics", async (req, res) => {
+router.get("/rooms/stats", async (req, res) => {
     try {
-        const { MaChiNhanh } = req.query;
-        console.log(MaChiNhanh)
-        const statistics  = await amenitiesService.getAmenitiesStatisticsbyBranch(MaChiNhanh);
+        const { branchId } = req.query;
+        console.log(branchId);
+        const statistics = await amenitiesService.getAmenitiesStatisticsbyBranch(branchId);
         res.send({
             status: "success",
             message: "Thống kê số lượng phòng theo từng tiện nghi",
@@ -17,13 +18,9 @@ router.get("/amenities-statistics", async (req, res) => {
         });
     } catch (error) {
         console.error("Error:", error);
-        res.status(500).send({ status: "failed", error: error.message });
+        res.status(error.status).send({ status: "failed", error: error.message });
     }
 });
-
-
-
-
 
 router.post("/rooms", async (req, res) => {
     let { ten, moTa } = req.body;
@@ -133,6 +130,36 @@ router.get("/rooms/all", async (req, res) => {
         res.status(500).send({ status: "failed", error: error.message });
     }
 });
+
+//! Thêm tiện nghi vào nhiều phòng
+router.post("/add/multiple", async (req, res) => {
+    let { amenityId, roomIds } = req.body;
+    if (!amenityId || !roomIds) {
+        return res.status(400).send({ status: "failed", message: "Thiếu thông tin tiện nghi hoặc phòng" });
+    }
+
+    try {
+        roomIds = JSON.parse(roomIds);
+        console.log(roomIds);
+        
+        if (!Array.isArray(roomIds) || roomIds.length === 0) {
+            throw createHttpError(400, "Thiếu thông tin phòng");
+        }
+        const result = await amenitiesService.addAmenityToRooms(amenityId, roomIds);
+
+        res.send({
+            status: "success",
+            message: "Tiện nghi đã được thêm vào các phòng",
+            data: result,
+        });
+    } catch (error) {
+        res.status(error.status || 500).send({
+            status: "failed",
+            error: error.message,
+        });
+    }
+});
+
 //! Thêm tiện nghi vào phòng
 router.post("/add/:roomId", async (req, res) => {
     const { roomId } = req.params;
@@ -154,7 +181,7 @@ router.post("/add/:roomId", async (req, res) => {
 });
 
 //! Thêm tiện nghi vào nhiều phòng
-router.post("/add/multiple-rooms", async (req, res) => {
+router.post("/add/multiple", async (req, res) => {
     const { maTienNghi, maPhongList } = req.body;
 
     if (!maTienNghi || !maPhongList || maPhongList.length === 0) {
@@ -194,6 +221,7 @@ router.delete("/delete/:roomId/:amenityId", async (req, res) => {
         res.status(500).send({ status: "failed", error: error.message });
     }
 });
+
 //! Xem thông tin tiện nghi có trong phòng
 router.get("/:roomId", async (req, res) => {
     const { roomId } = req.params;
@@ -260,12 +288,5 @@ router.get("/:roomId/:amenityId", async (req, res) => {
         res.status(500).send({ status: "failed", error: error.message });
     }
 });
-
-
-
-
-
-
-
 
 module.exports = router;

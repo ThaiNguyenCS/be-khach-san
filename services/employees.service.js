@@ -1,11 +1,76 @@
-const { formatDate } = require('date-fns');
-const createHttpError = require('http-errors');
-const { checkMissingField } = require('../utils/errorHandler');
-const { generateUUIDV4 } = require('../utils/idManager');
-const { database } = require('../database');
-const { pushUpdate } = require('../utils/dynamicUpdate');
+const { formatDate } = require("date-fns");
+const createHttpError = require("http-errors");
+const { checkMissingField, checkMonthValue } = require("../utils/errorHandler");
+const { generateUUIDV4 } = require("../utils/idManager");
+const { database } = require("../database");
+const { pushUpdate } = require("../utils/dynamicUpdate");
 
 class EmployeeService {
+    // tạo bảng lương
+    async generateIssuedSalary(data) {
+        let { month, year } = data;
+        try {
+            checkMissingField("month", month);
+            checkMissingField("year", year);
+            month = parseInt(month);
+            year = parseInt(year);
+            const QUERY = `CALL GenerateLichSuCapLuong (${month}, ${year})`;
+            const [result] = await database.query(QUERY);
+            return { data: result };
+        } catch (error) {
+            console.log(error);
+
+            if (error.status) throw error;
+            throw createHttpError(500, error.message);
+        }
+    }
+
+    // update lương trong bảng cấp lương
+    async updateIssuedSalary(data) {
+        let { empId, salary, status, month, year } = data;
+        try {
+            checkMissingField("month", month);
+            checkMissingField("year", year);
+            month = parseInt(month);
+            year = parseInt(year);
+            const updates = [];
+            if (salary) {
+                salary = parseFloat(salary);
+                updates.push(`MucLuong = ${salary}`);
+            }
+            if (status) {
+                updates.push(`TrangThai = ${status === "paid" ? 1 : 0}`);
+            }
+            if (updates.length === 0) throw createHttpError(400, "Vui lòng chọn ít nhất 1 trường để cập nhật");
+            const QUERY = `UPDATE LichSuCapLuong SET ${updates.join(
+                ", "
+            )} WHERE IDNhanVien = '${empId}' AND NamCap = ${year} AND ThangCap = ${month}`;
+            const [result] = await database.query(QUERY);
+            return { data: result };
+        } catch (error) {
+            console.log(error);
+            if (error.status) throw error;
+            throw createHttpError(500, error.message);
+        }
+    }
+
+    // xem bảng lương tháng
+    async getIssuedSalary(query) {
+        let { month = new Date(Date.now()).getMonth() + 1, year = new Date(Date.now()).getFullYear() } = query;
+        try {
+            month = parseInt(month);
+            checkMonthValue(month);
+            year = parseInt(year);
+            const QUERY = `SELECT LSCL.*, NV.HoTen, NV.SoTaiKhoan, NV.VaiTro FROM LichSuCapLuong LSCL JOIN NhanVien NV ON LSCL.IDNhanVien = NV.ID WHERE ThangCap = ${month} AND NamCap = ${year}`;
+            console.log(QUERY);
+            const [result] = await database.query(QUERY);
+            return { data: result };
+        } catch (error) {
+            if (error.status) throw error;
+            throw createHttpError(500, error.message);
+        }
+    }
+
     async addEmployee(data) {
         let {
             name,
@@ -15,16 +80,16 @@ class EmployeeService {
             ssn,
             citizenId,
             bankAccount,
-            role = 'Other',
+            role = "Other",
             startWorkingDate,
             eduLevel,
             branchId,
         } = data;
         try {
-            checkMissingField('name', name);
-            checkMissingField('citizenId', citizenId);
-            checkMissingField('dateOfBirth', dateOfBirth);
-            checkMissingField('sex', sex);
+            checkMissingField("name", name);
+            checkMissingField("citizenId", citizenId);
+            checkMissingField("dateOfBirth", dateOfBirth);
+            checkMissingField("sex", sex);
             /*
                 IN p_ID VARCHAR(50),
                 IN p_HoTen VARCHAR(255),
@@ -44,15 +109,15 @@ class EmployeeService {
             '${newEmpId}',
             '${name}', 
             '${sex}', 
-            ${salary ? parseFloat(salary) : 'NULL'}, 
-            '${formatDate(new Date(dateOfBirth), 'yyyy-MM-dd')}', 
-            ${ssn ? `'${ssn}'` : 'NULL'}, 
+            ${salary ? parseFloat(salary) : "NULL"}, 
+            '${formatDate(new Date(dateOfBirth), "yyyy-MM-dd")}', 
+            ${ssn ? `'${ssn}'` : "NULL"}, 
             '${citizenId}', 
-            ${bankAccount ? `'${bankAccount}'` : 'NULL'}, 
+            ${bankAccount ? `'${bankAccount}'` : "NULL"}, 
             '${role}', 
-            ${startWorkingDate ? `'${startWorkingDate}'` : 'NULL'}, 
-            ${eduLevel ? `'${eduLevel}'` : 'NULL'}, 
-            ${branchId ? `'${branchId}'` : 'NULL'})`;
+            ${startWorkingDate ? `'${startWorkingDate}'` : "NULL"}, 
+            ${eduLevel ? `'${eduLevel}'` : "NULL"}, 
+            ${branchId ? `'${branchId}'` : "NULL"})`;
             console.log(QUERY);
 
             const [result] = await database.query(QUERY);
@@ -84,36 +149,36 @@ class EmployeeService {
         } = data;
         try {
             const updates = [];
-            pushUpdate(updates, 'HoTen', name ? `'${name}'` : null);
-            pushUpdate(updates, 'GioiTinh', sex ? `'${sex}'` : null);
-            pushUpdate(updates, 'Luong', salary ? parseFloat(salary) : null);
+            pushUpdate(updates, "HoTen", name ? `'${name}'` : null);
+            pushUpdate(updates, "GioiTinh", sex ? `'${sex}'` : null);
+            pushUpdate(updates, "Luong", salary ? parseFloat(salary) : null);
             pushUpdate(
                 updates,
-                'NgaySinh',
-                dateOfBirth ? `'${formatDate(new Date(dateOfBirth), 'yyyy-MM-dd')}'` : null
+                "NgaySinh",
+                dateOfBirth ? `'${formatDate(new Date(dateOfBirth), "yyyy-MM-dd")}'` : null
             );
-            pushUpdate(updates, 'MaBHXH', ssn ? `'${ssn}'` : null);
-            pushUpdate(updates, 'CCCD', citizenId ? `'${citizenId}'` : null);
-            pushUpdate(updates, 'SoTaiKhoan', bankAccount ? `'${bankAccount}'` : null);
-            pushUpdate(updates, 'VaiTro', role ? `'${role}'` : null);
+            pushUpdate(updates, "MaBHXH", ssn ? `'${ssn}'` : null);
+            pushUpdate(updates, "CCCD", citizenId ? `'${citizenId}'` : null);
+            pushUpdate(updates, "SoTaiKhoan", bankAccount ? `'${bankAccount}'` : null);
+            pushUpdate(updates, "VaiTro", role ? `'${role}'` : null);
             pushUpdate(
                 updates,
-                'ThoiGianBatDauLamViec',
-                startWorkingDate ? `'${formatDate(new Date(startWorkingDate), 'yyyy-MM-dd')}'` : null
+                "ThoiGianBatDauLamViec",
+                startWorkingDate ? `'${formatDate(new Date(startWorkingDate), "yyyy-MM-dd")}'` : null
             );
-            pushUpdate(updates, 'TrinhDoHocVan', eduLevel ? `'${eduLevel}'` : null);
-            pushUpdate(updates, 'MaChiNhanh', branchId ? `'${branchId}'` : null);
+            pushUpdate(updates, "TrinhDoHocVan", eduLevel ? `'${eduLevel}'` : null);
+            pushUpdate(updates, "MaChiNhanh", branchId ? `'${branchId}'` : null);
             if (updates.length > 0) {
-                const QUERY = `UPDATE NhanVien SET ${updates.join(', ')} WHERE ID = '${empId}'`;
+                const QUERY = `UPDATE NhanVien SET ${updates.join(", ")} WHERE ID = '${empId}'`;
                 const [result] = await database.query(QUERY);
                 if (result.affectedRows === 0) {
                     // not modified
-                    throw createHttpError(404, 'Không tìm thấy nhân viên');
+                    throw createHttpError(404, "Không tìm thấy nhân viên");
                 }
                 return result;
             } // no fields to update
             else {
-                throw createHttpError(403, 'Hãy nhập các trường cần cập nhật');
+                throw createHttpError(403, "Hãy nhập các trường cần cập nhật");
             }
         } catch (error) {
             console.log(error);
@@ -130,7 +195,7 @@ class EmployeeService {
             const QUERY = `DELETE FROM NhanVien WHERE ID = '${empId}'`;
             const [result] = await database.query(QUERY);
             if (result.affectedRows === 0) {
-                throw createHttpError(404, 'Nhân viên không tồn tại');
+                throw createHttpError(404, "Nhân viên không tồn tại");
             }
         } catch (error) {
             if (error.status) {
@@ -140,9 +205,7 @@ class EmployeeService {
         }
     }
 
-    async getEmployeeById(empId) {
-        
-    }
+    async getEmployeeById(empId) {}
 
     async getAllEmployees(query) {
         let { limit = 20, page = 1, role, name } = query;
@@ -158,11 +221,11 @@ class EmployeeService {
                 condition.push(`HoTen LIKE '%${name}%'`);
             }
             const QUERY = `SELECT * FROM NhanVien ${
-                condition.length > 0 ? `WHERE ${condition.join(' AND ')}` : ''
+                condition.length > 0 ? `WHERE ${condition.join(" AND ")}` : ""
             }  LIMIT ${limit} OFFSET ${(page - 1) * limit}`;
 
             const COUNT_QUERY = `SELECT COUNT(*) as total FROM NhanVien ${
-                condition.length > 0 ? `WHERE ${condition.join(' AND ')}` : ''
+                condition.length > 0 ? `WHERE ${condition.join(" AND ")}` : ""
             }`;
             const [result] = await database.query(QUERY);
             const [count] = await database.query(COUNT_QUERY);
