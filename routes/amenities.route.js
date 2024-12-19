@@ -154,7 +154,7 @@ router.post("/add/:roomId", async (req, res) => {
 });
 
 //! Thêm tiện nghi vào nhiều phòng
-router.post("/add/multiple", async (req, res) => {
+router.post("/add/multiple-rooms", async (req, res) => {
     const { maTienNghi, maPhongList } = req.body;
 
     if (!maTienNghi || !maPhongList || maPhongList.length === 0) {
