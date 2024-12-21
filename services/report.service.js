@@ -123,6 +123,73 @@ class ReportService {
         }
     }
 
+    async getIntakeFromConsumerGoods(query) {
+        let { period = "daily", startTime = new Date(Date.now()), endTime = new Date(Date.now()) } = query;
+        try {
+            startTime = new Date(startTime);
+            endTime = new Date(endTime);
+            // invalid query
+            if (compareAsc(endTime, startTime) === -1) {
+                throw createHttpError(400, "endTime is before startTime");
+            }
+
+            let dateArr = [];
+            console.log("dateArr", dateArr);
+
+            const conditions = [];
+            const selects = [];
+            if (period === "daily") {
+                dateArr = getDateArrayV2(startTime, endTime, "date");
+                conditions.push(
+                    `DATE(ThoiGian) IN (${dateArr
+                        .map((item) => `'${format(new Date(item), "yyyy-MM-dd")}'`)
+                        .join(", ")})`
+                );
+                selects.push([`DATE(ThoiGian)`, "AS date"]);
+            }
+            if (period === "monthly") {
+                dateArr = getDateArrayV2(startTime, endTime, "month");
+                console.log(dateArr);
+
+                conditions.push(
+                    `MONTH(ThoiGian) IN  (${dateArr
+                        .map((item) => `MONTH('${format(new Date(item), "yyyy-MM-dd")}')`)
+                        .join(", ")})`
+                );
+                conditions.push(
+                    `YEAR(ThoiGian) IN  (${dateArr
+                        .map((item) => `YEAR('${format(new Date(item), "yyyy-MM-dd")}')`)
+                        .join(", ")})`
+                );
+                selects.push(["MONTH(ThoiGian)", "AS month"]);
+                selects.push([`YEAR(ThoiGian)`, "AS year"]);
+            }
+            if (period === "yearly") {
+                dateArr = getDateArrayV2(startTime, endTime, "year");
+                conditions.push(
+                    `YEAR(ThoiGian) IN  (${dateArr
+                        .map((item) => `YEAR('${format(new Date(item), "yyyy-MM-dd")}')`)
+                        .join(", ")})`
+                );
+                selects.push([`YEAR(ThoiGian)`, "AS year"]);
+            }
+            const QUERY = `SELECT SUM(VPSD.Gia) as revenue, SUM(VPSD.SoLuong) as quantity, DTD.TenSanPham as goodName, ${selects
+                .map((item) => item[0] + " " + item[1])
+                .join(
+                    ", "
+                )} FROM BanBaoCaoPhong BBCP JOIN VatPhamSuDung VPSD ON BBCP.ID = VPSD.MaBanBaoCaoPhong LEFT JOIN DoTieuDung DTD ON DTD.ID = VPSD.ID ${
+                conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : ""
+            } GROUP BY DTD.ID, DTD.TenSanPham, ${selects.map((item) => item[0]).join(", ")}`;
+
+            console.log(QUERY);
+            const [result] = await database.query(QUERY);
+            return { goodConsumes: { data: result, period, startTime: dateArr[0], endTime: dateArr.at(-1) } };
+        } catch (error) {
+            if (error.status) throw error;
+            throw createHttpError(500, error.message);
+        }
+    }
+
     async getIntakeFromOrderedRooms(query) {
         let { period = "daily", startTime = new Date(Date.now()), endTime = new Date(Date.now()) } = query;
         try {

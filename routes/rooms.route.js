@@ -32,6 +32,7 @@ router.post("/:roomId/:createdTime/report", verifyGoodsInRoom, async (req, res) 
         await roomsService.generateReportForRoomRecord(req.params.roomId, req.params.createdTime, req.body);
         res.send({ status: "success", message: "Tạo báo cáo thành công!" });
     } catch (error) {
+        console.log(error);
         res.status(error.status).send({ status: "failed", error: error.message });
     }
 });

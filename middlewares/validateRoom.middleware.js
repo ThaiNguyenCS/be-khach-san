@@ -37,11 +37,11 @@ const verifyRoomsThatAvailable = async (req, res, next) => {
 };
 
 const verifyGoodsInRoom = async (req, res, next) => {
-    let {roomId, createdAt} = req.params
+    let {roomId, createdTime} = req.params
     let {goods} = req.body
     try {
         checkMissingField("roomId", roomId)
-        checkMissingField("createdAt", createdAt)
+        checkMissingField("createdTime", createdTime)
         checkMissingField("goods", goods)
         goods = JSON.parse(goods)
         if(!Array.isArray(goods))
@@ -76,6 +76,8 @@ const verifyGoodsInRoom = async (req, res, next) => {
         next()
 
     } catch (error) {
+        console.log(error);
+        
         res.status(500).send({status: "failed", message: error.message})
     }
 }
