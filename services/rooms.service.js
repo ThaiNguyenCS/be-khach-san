@@ -4,7 +4,6 @@ const { database } = require("../database");
 const { formatDate, compareAsc, differenceInBusinessDays, differenceInCalendarDays } = require("date-fns");
 const consumerGoodService = require("./consumer_goods.service");
 const { checkMissingField } = require("../utils/errorHandler");
-const e = require("express");
 const { getDateArray } = require("../utils/date");
 const discountService = require("./discount.service");
 require("dotenv").config();
@@ -227,6 +226,8 @@ class RoomService {
             await connection.rollback();
             if (!error.status) throw createHttpError(500, error.message);
             throw error;
+        } finally {
+            connection.release();
         }
     }
 
@@ -427,10 +428,9 @@ class RoomService {
     async updateOrderStatus(orderId, data) {
         let { action } = data;
         try {
-            checkMissingField("action", action)
-            if(action !== 'refuse' && action !== 'accept')
-            {
-                throw createHttpError(400, `action phải là refuse hoặc accept`)
+            checkMissingField("action", action);
+            if (action !== "refuse" && action !== "accept") {
+                throw createHttpError(400, `action phải là refuse hoặc accept`);
             }
             const order = await this.getOrder(orderId);
             if (order) {
@@ -438,14 +438,14 @@ class RoomService {
                     throw createHttpError(403, "Order is cancelled, its status cannot be changed");
                 } else {
                     let UPDATE_ORDER_QUERY = `UPDATE DonDatPhong SET TrangThaiDon = ${
-                        action === 'accept' ? `'confirmed'` : action === 'refuse' ? `'cancelled'` : `'not confirmed'`
+                        action === "accept" ? `'confirmed'` : action === "refuse" ? `'cancelled'` : `'not confirmed'`
                     } WHERE MaDon = '${orderId}'`;
                     console.log(UPDATE_ORDER_QUERY);
                     const [result] = await database.query(UPDATE_ORDER_QUERY);
                     return result;
                 }
             }
-            throw createHttpError(404, "Không tìm thấy đơn đặt phòng")
+            throw createHttpError(404, "Không tìm thấy đơn đặt phòng");
         } catch (error) {
             if (error.status) {
                 throw error;
@@ -674,6 +674,8 @@ class RoomService {
                 throw error;
             }
             throw createHttpError(500, error.message);
+        } finally {
+            connection.release();
         }
     }
 

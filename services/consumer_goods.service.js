@@ -28,6 +28,10 @@ class ConsumerGoodService {
             if (!error.status) throw createHttpError(500, error.message);
             throw error;
         }
+        finally
+        {
+            connection.release()
+        }
     }
 
     async findGoodsInRoom(roomId) {
