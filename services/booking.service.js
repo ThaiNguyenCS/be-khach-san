@@ -4,26 +4,54 @@ const customerService = require("./customer.service");
 const roomsService = require("./rooms.service");
 const room_serviceService = require("./room_service.service");
 const { checkMissingField } = require("../utils/errorHandler");
+const { format } = require("date-fns");
 
 class BookingService {
     async getAllOrders(query) {
-        let { limit = 20, page = 1, cusPhoneNumber } = query;
+        let { limit = 20, page = 1, cusPhoneNumber, sortBy = "date", order = "desc", orderDate } = query;
+
         try {
+            order = order.toLowerCase();
+            sortBy = sortBy.toLowerCase();
             limit = parseInt(limit);
             page = parseInt(page);
-            
-            let condition = "";
+            let order_condition = "";
+            // check value of order
+            if (order !== "desc" || order !== "desc") {
+                throw createHttpError(400, `Không tồn tại option order ${order}`);
+            }
+            // check value of sortBy
+
+            if (sortBy && sortBy !== "date") {
+                throw createHttpError(400, `Không tồn tại option sortBy ${sortBy}`);
+            }
+
+            if (sortBy === "date") {
+                order_condition = `ORDER BY ThoiGianDat ${order}`;
+            }
+            const condition = [];
+
+            if (orderDate) {
+                orderDate = format(new Date(orderDate), "yyyy-MM-dd");
+                condition.push(`DATE(ThoiGianDat) = '${orderDate}'`);
+            }
+
             let customer = null;
             if (cusPhoneNumber) {
                 customer = await customerService.findCustomerByPhoneNumber(cusPhoneNumber);
                 if (!customer) {
                     throw createHttpError(404, `Không tồn tại khách hàng với số điện thoại ${cusPhoneNumber}`);
                 }
-                condition = ` WHERE IDKhachHang = '${customer.ID}'`;
-                
+                condition.push(`IDKhachHang = '${customer.ID}'`);
             }
-            const ORDER_QUERY = `SELECT * FROM DonDatPhong ${condition} LIMIT ${limit} OFFSET ${(page - 1) * limit}`;
-            const COUNT_QUERY = `SELECT COUNT(*) as total FROM DonDatPhong ${condition}`;
+            const ORDER_QUERY = `SELECT * FROM DonDatPhong ${
+                condition.length > 0 ? `WHERE ${condition.join(" AND ")}` : ""
+            } ${order_condition} LIMIT ${limit} OFFSET ${(page - 1) * limit}`;
+            console.log(ORDER_QUERY);
+
+            const COUNT_QUERY = `SELECT COUNT(*) as total FROM DonDatPhong ${
+                condition.length > 0 ? `WHERE ${condition.join(" AND ")}` : ""
+            }`;
             const [orders] = await database.query(ORDER_QUERY);
             const [count] = await database.query(COUNT_QUERY);
             if (orders.length > 0) {
@@ -32,7 +60,7 @@ class BookingService {
                     promises.push(this.getOrderById(orders[i].MaDon));
                 }
                 const result = await Promise.all(promises);
-                return { data: result, limit, page, total: count[0].total };
+                return { data: result, limit, page, total: count[0].total, sortBy, order };
             }
             return { data: [], limit, page, total: count[0].total };
         } catch (error) {
@@ -59,8 +87,6 @@ class BookingService {
             throw createHttpError(500, error.message);
         }
     }
-
-  
 
     async getOrderByIdForCheckout(orderId) {
         try {

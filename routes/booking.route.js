@@ -17,7 +17,7 @@ router.get("/all", async (req, res) => {
         res.send({ status: "success", ...result });
     } catch (error) {
         console.log(error.message);
-        res.status(500).send({ status: "failed", error: error });
+        res.status(error.status).send({ status: "failed", error: error });
     }
 });
 
@@ -172,10 +172,8 @@ router.post("/", verifyRoomsThatAvailable, async (req, res) => {
         console.log(error.message);
         await connection.rollback();
         res.status(error.status || 500).send({ status: "failed", error: error });
-    }
-    finally
-    {
-        connection.release()
+    } finally {
+        connection.release();
     }
 });
 
