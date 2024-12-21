@@ -25,6 +25,16 @@ class EmployeeService {
         }
     }
 
+    async getIssuedSalaryForAnEmp(data) {
+        let { empId, month, year } = data;
+        const QUERY = `SELECT * FROM LichSuCapLuong WHERE IDNhanVien = '${empId}' AND NamCap = ${year} AND ThangCap = ${month} LIMIT 1`;
+        const [result] = await database.query(QUERY);
+        if (result.length > 0) {
+            return result[0];
+        }
+        return null;
+    }
+
     // update lương trong bảng cấp lương
     async updateIssuedSalary(data) {
         let { empId, salary, status, month, year } = data;
@@ -33,6 +43,10 @@ class EmployeeService {
             checkMissingField("year", year);
             month = parseInt(month);
             year = parseInt(year);
+            const issuedSalary = await this.getIssuedSalaryForAnEmp({ empId, month, year });
+            if (issuedSalary && issuedSalary.TrangThai) {
+                throw createHttpError(403, "Lương đã cấp không thể cập nhật");
+            }
             const updates = [];
             if (salary) {
                 salary = parseFloat(salary);
