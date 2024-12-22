@@ -1,2 +1,4 @@
-/.env
 /node_modules
+/convertToSQL.js
+/test.js
+/.env
