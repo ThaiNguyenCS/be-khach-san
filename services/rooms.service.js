@@ -661,8 +661,8 @@ class RoomService {
                         console.log(UPDATE_GOODS_IN_ROOM);
                         await connection.query(UPDATE_GOODS_IN_ROOM);
                     }
-                    if (brokenFacilities.length > 0) {
-                    }
+                    // if (brokenFacilities.length > 0) {
+                    // }
                     await connection.commit();
                 }
             } else {

@@ -30,7 +30,7 @@
 const csv = require("csv-parser");
 const fs = require("fs");
 
-const numberIdxes = { 3: "float" };
+const numberIdxes = {  };
 
 function generateInsertSQL(csvFilePath, tableName) {
     let sql = `INSERT INTO ${tableName} (`;
@@ -62,6 +62,7 @@ function generateInsertSQL(csvFilePath, tableName) {
         })
         .on("end", () => {
             sql += values.join(", ");
+            sql += ";"
             fs.writeFileSync("insert_sql.txt", sql);
             console.log("SQL statements generated successfully!");
         });
@@ -69,12 +70,12 @@ function generateInsertSQL(csvFilePath, tableName) {
 
 // Example usage:
 // let csvFilePath = "C://Users//THAI//OneDrive//Desktop//Database - Phòng.csv";
-let csvFilePath = "C://Users//THAI//OneDrive//Desktop//nhanvien.csv";
+let csvFilePath = "C://Users//THAI//OneDrive//Desktop//khachhang.csv";
 // let csvFilePath = "C://Users//THAI//OneDrive//Desktop//Database - Phòng.csv";
 // let csvFilePath = "C://Users//THAI//OneDrive//Desktop//Database - Phòng.csv";
 
 console.log(csvFilePath);
 
-const tableName = "NhanVien";
+const tableName = "KhachHang";
 
 generateInsertSQL(csvFilePath, tableName);

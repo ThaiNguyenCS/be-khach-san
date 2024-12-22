@@ -71,10 +71,10 @@ class BookingService {
 
     async getOrderById(orderId) {
         try {
-            const ORDER_QUERY = `SELECT * FROM DonDatPhong WHERE MaDon = '${orderId}' LIMIT 1`;
+            const ORDER_QUERY = `SELECT DDP.*, KH.Ten, KH.SoDienThoai FROM DonDatPhong DDP JOIN KhachHang KH ON KH.ID = DDP.IDKhachHang WHERE DDP.MaDon = '${orderId}' LIMIT 1`;
             const [orders] = await database.query(ORDER_QUERY);
             if (orders.length > 0) {
-                const ROOM_RECORD_QUERY = `SELECT * FROM BanGhiPhong WHERE MaDatPhong = '${orderId}'`;
+                const ROOM_RECORD_QUERY = `SELECT BGP.*, P.SoPhong, P.LoaiPhong, P.MaChiNhanh FROM BanGhiPhong BGP JOIN Phong P ON P.MaPhong = BGP.MaPhong WHERE BGP.MaDatPhong = '${orderId}'`;
                 const [records] = await database.query(ROOM_RECORD_QUERY);
                 if (records.length === 0) {
                     throw createHttpError(404, `Không tìm thấy phòng đã đặt trong đơn đặt phòng ${orderId}`);
@@ -108,8 +108,9 @@ class BookingService {
                     })
                 );
             }
-            const [reports] = await Promise.all(reportPromises);
-            console.log(reports);
+            console.log(reportPromises.length)
+            const reports = await Promise.all(reportPromises);
+            console.log("reports", reports);
             const services = await Promise.all(servicePromises);
             console.log(services);
             return { order, reports, rooms, services };
