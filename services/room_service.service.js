@@ -407,6 +407,8 @@ class RoomService {
                 }
             }
         } catch (error) {
+            console.log(error);
+            
             if (error.status) throw error;
             throw createHttpError(500, error.message);
         }

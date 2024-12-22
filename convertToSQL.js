@@ -76,6 +76,6 @@ let csvFilePath = "C://Users//THAI//OneDrive//Desktop//khachhang.csv";
 
 console.log(csvFilePath);
 
-const tableName = "KhachHang";
+const tableName = "BanGhiPhong";
 
 generateInsertSQL(csvFilePath, tableName);

@@ -74,6 +74,7 @@ router.post("/room-service", async (req, res) => {
         const result = await room_serviceService.createServiceOrderForRoomRecord(req.body);
         res.send({ status: "success", message: "Tạo đơn sử dụng dịch vụ thành công" });
     } catch (error) {
+        console.log(error)
         res.status(error.status).send({ status: "failed", error: error });
     }
 });
