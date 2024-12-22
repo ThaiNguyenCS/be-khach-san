@@ -17,7 +17,7 @@ class BookingService {
             page = parseInt(page);
             let order_condition = "";
             // check value of order
-            if (order !== "desc" || order !== "desc") {
+            if (order !== "desc" || order !== "asc") {
                 throw createHttpError(400, `Không tồn tại option order ${order}`);
             }
             // check value of sortBy
