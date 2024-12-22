@@ -1,7 +1,7 @@
 Express app cho Website Khách sạn - BTL DB 2 HK241
 #### Hướng dẫn chạy app
-npm run dev
-npm install
+`npm install`
+`npm run dev`  
 #### Deploy server
 * URL: https://be-khach-san.onrender.com
 * Server free nên khi request lần đầu có thể bị timeout hoặc chậm. Reload lại vài lần để server được khởi động lại.
